@@ -1,0 +1,44 @@
+spring:
+  application:
+    name: pipelinepro
+  datasource:
+    url: jdbc:h2:mem:pipelinepro;MODE=PostgreSQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: 
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        format_sql: true
+        jdbc:
+          time_zone: UTC
+  web:
+    resources:
+      add-mappings: true
+  h2:
+    console:
+      enabled: true
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  tracing:
+    sampling:
+      probability: 0.1
+logging:
+  pattern:
+    correlation: "corr=%X{correlationId:-},trace=%X{traceId:-},span=%X{spanId:-} "
+
+---
+spring:
+  config:
+    activate:
+      on-profile: dev,test
+management:
+  tracing:
+    sampling:
+      probability: 1.0

@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Validate Proposal | PipelinePro</title>
+    <link rel="stylesheet" href="/app/assets/css/styles.css">
+</head>
+<body>
+<main class="app-shell" role="main">
+    <header class="app-header">
+        <p class="brand">PipelinePro</p>
+        <h1 class="page-title">Payment Allocation Validation</h1>
+        <p class="page-subtitle">Validate, reject, or route proposals while keeping mandatory reason and actor metadata.</p>
+        <nav aria-label="Main navigation">
+            <ul class="nav-list">
+                <li><a href="/app/payments/intake.html">Intake</a></li>
+                <li><a href="/app/payments/detail.html">Payment Detail</a></li>
+                <li><a href="/app/proposals/list.html">Proposal Queue</a></li>
+                <li><a href="/app/proposals/validate.html" aria-current="page">Validate Proposal</a></li>
+                <li><a href="/app/debts/create.html">Debt Create</a></li>
+                <li><a href="/app/debts/search.html">Debt Search</a></li>
+                <li><a href="/app/allocations/detail.html">Allocation Detail</a></li>
+                <li><a href="/app/audit/access-log.html">Audit Log</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <section class="card" aria-labelledby="proposal-load-heading">
+        <h2 id="proposal-load-heading">Load proposal</h2>
+        <div class="grid grid-2">
+            <div>
+                <label for="proposal-id">Proposal ID</label>
+                <input id="proposal-id" placeholder="UUID" required>
+            </div>
+            <div>
+                <label for="actor">Actor</label>
+                <input id="actor" placeholder="jane.doe" required>
+            </div>
+        </div>
+        <button type="button" class="btn btn-primary" id="load-proposal">Load proposal</button>
+        <div id="validate-banner" class="status-banner status-info" hidden></div>
+    </section>
+
+    <section class="card" aria-labelledby="candidate-heading">
+        <h2 id="candidate-heading">Candidate debts</h2>
+        <ul id="candidate-list" class="list-reset" aria-live="polite"></ul>
+    </section>
+
+    <section class="card" aria-labelledby="payment-info-heading">
+        <h2 id="payment-info-heading">Payment information</h2>
+        <div id="payment-info" class="details-grid" aria-live="polite"></div>
+    </section>
+
+    <section class="card" aria-labelledby="debtor-info-heading">
+        <h2 id="debtor-info-heading">Debtor information</h2>
+        <div id="debtor-info" class="details-grid" aria-live="polite"></div>
+        <div class="grid grid-2" style="margin-top: 12px;">
+            <div>
+                <label for="national-number-access-reason">Full national number access reason</label>
+                <input id="national-number-access-reason" placeholder="Investigation justification">
+            </div>
+            <div>
+                <p class="muted">Full display requires backend permission: VIEW_FULL_NATIONAL_NUMBER.</p>
+            </div>
+        </div>
+        <div class="button-row" style="margin-top: 12px;">
+            <button type="button" class="btn btn-secondary" id="request-full-national-number">Request full national number</button>
+            <button type="button" class="btn btn-ghost" id="hide-full-national-number">Mask national number</button>
+        </div>
+        <p id="national-number-state" class="muted">National number is masked by default.</p>
+    </section>
+
+    <section class="card" aria-labelledby="debt-info-heading">
+        <h2 id="debt-info-heading">Debt information</h2>
+        <div id="debt-info" class="details-grid" aria-live="polite"></div>
+    </section>
+
+    <section class="card" aria-labelledby="action-heading">
+        <h2 id="action-heading">Validation actions</h2>
+        <form id="proposal-action-form" novalidate>
+            <div class="grid grid-2">
+                <div>
+                    <label for="selected-debt-id">Selected debt ID</label>
+                    <input id="selected-debt-id" required>
+                </div>
+                <div>
+                    <label for="allocation-amount">Allocation amount</label>
+                    <input id="allocation-amount" type="number" min="0.01" step="0.01" required>
+                </div>
+            </div>
+            <div>
+                <label for="reason">Reason</label>
+                <textarea id="reason" required></textarea>
+            </div>
+
+            <div class="button-row">
+                <button type="button" class="btn btn-primary" id="validate-btn">Validate</button>
+                <button type="button" class="btn btn-danger" id="reject-btn">Reject</button>
+                <button type="button" class="btn btn-secondary" id="select-debt-btn">Select debt</button>
+                <button type="button" class="btn btn-ghost" id="mark-unmatched-btn">Mark unmatched</button>
+                <button type="button" class="btn btn-ghost" id="investigation-btn">Request investigation</button>
+            </div>
+        </form>
+        <pre id="proposal-action-result" class="muted">No action submitted yet.</pre>
+    </section>
+</main>
+<script src="/app/assets/js/common.js" defer></script>
+<script src="/app/assets/js/proposals-validate.js" defer></script>
+</body>
+</html>

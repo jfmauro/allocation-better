@@ -1,0 +1,186 @@
+openapi: 3.0.3
+info:
+  title: Example Belgif REST API
+  version: 1.0.0
+  description: Replace with business purpose and consumer-facing description.
+servers:
+  - url: https://api.example.gov.be/example/v1
+tags:
+  - name: declarations
+    description: Declaration resources
+security:
+  - oauth2: []
+paths:
+  /declarations:
+    get:
+      tags: [declarations]
+      operationId: listDeclarations
+      summary: List declarations
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        '200':
+          description: Declarations page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeclarationPage'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags: [declarations]
+      operationId: createDeclaration
+      summary: Create a declaration
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeclarationInput'
+      responses:
+        '201':
+          description: Declaration created
+          headers:
+            Location:
+              description: URI of the created declaration
+              schema:
+                type: string
+                format: uri
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Declaration'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /declarations/{declarationId}:
+    get:
+      tags: [declarations]
+      operationId: getDeclaration
+      summary: Get a declaration
+      parameters:
+        - $ref: '#/components/parameters/DeclarationId'
+      responses:
+        '200':
+          description: Declaration found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Declaration'
+        '404':
+          $ref: '#/components/responses/NotFound'
+components:
+  securitySchemes:
+    oauth2:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: https://auth.example.gov.be/oauth2/token
+          scopes: {}
+  parameters:
+    DeclarationId:
+      name: declarationId
+      in: path
+      required: true
+      schema:
+        type: string
+      description: Opaque declaration identifier.
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    Unauthorized:
+      description: Unauthorized
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    Forbidden:
+      description: Forbidden
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    NotFound:
+      description: Not found
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    Conflict:
+      description: Conflict
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+  schemas:
+    DeclarationInput:
+      type: object
+      required: [reference]
+      properties:
+        reference:
+          type: string
+    Declaration:
+      allOf:
+        - $ref: '#/components/schemas/DeclarationInput'
+        - type: object
+          required: [id]
+          properties:
+            id:
+              type: string
+    DeclarationPage:
+      type: object
+      required: [items, page]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Declaration'
+        page:
+          type: object
+          required: [limit, offset]
+          properties:
+            limit:
+              type: integer
+            offset:
+              type: integer
+            total:
+              type: integer
+    Problem:
+      type: object
+      required: [type, title, status]
+      properties:
+        type:
+          type: string
+          format: uri-reference
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+        instance:
+          type: string
+          format: uri-reference

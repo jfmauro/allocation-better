@@ -1,0 +1,42 @@
+# Build
+**/bin/
+**/out/
+!**/src/main/**/out/
+!**/src/main/**/out/**
+!**/src/test/**/out/
+!**/src/test/**/out/**
+target/
+*.class
+*.jar
+*.war
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# OS
+.DS_Store
+
+# Logs
+*.log
+
+# Temp
+*.tmp
+*.swp
+
+# OpenCode
+.opencode/node_modules
+
+# IDE metadata
+/.classpath
+/.project
+/.settings/
+/.factorypath
+**/.classpath
+**/.project
+**/.settings/
+**/.factorypath
+
+#git
+.gitkeep

@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Debtor List | PipelinePro</title>
+    <link rel="stylesheet" href="/app/assets/css/styles.css">
+</head>
+<body>
+<main class="app-shell" role="main">
+    <header class="app-header">
+        <p class="brand">PipelinePro</p>
+        <h1 class="page-title">Debtor Master Data</h1>
+        <p class="page-subtitle">Search and list debtor records with loading, empty, and error feedback.</p>
+        <nav aria-label="Main navigation">
+            <ul class="nav-list">
+                <li><a href="/app/debtors/create.html">Debtor Create</a></li>
+                <li><a href="/app/debtors/list.html" aria-current="page">Debtor List</a></li>
+                <li><a href="/app/debts/create.html">Debt Create</a></li>
+                <li><a href="/app/payments/intake.html">Payment Intake</a></li>
+                <li><a href="/app/proposals/list.html">Proposal Queue</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <section class="card" aria-labelledby="debtor-filter-heading">
+        <h2 id="debtor-filter-heading">Search criteria</h2>
+        <div class="grid grid-2">
+            <div>
+                <label for="search-query">Search</label>
+                <input id="search-query" name="query" maxlength="120" placeholder="Name, identifier, or reference">
+            </div>
+            <div>
+                <label for="debtor-type-filter">Debtor type</label>
+                <select id="debtor-type-filter" name="debtorType">
+                    <option value="">All types</option>
+                    <option value="ENTERPRISE">ENTERPRISE</option>
+                    <option value="NATURAL_PERSON">NATURAL_PERSON</option>
+                </select>
+            </div>
+        </div>
+        <label for="active-only">
+            <input id="active-only" type="checkbox" checked>
+            Show active debtors only
+        </label>
+        <div class="button-row">
+            <button type="button" id="search-debtors" class="btn btn-primary">Search debtors</button>
+        </div>
+        <div id="debtors-banner" class="status-banner status-info" hidden></div>
+    </section>
+
+    <section class="card" aria-labelledby="debtor-results-heading">
+        <h2 id="debtor-results-heading">Debtor list</h2>
+        <div id="debtors-table" class="table-wrap" aria-live="polite"></div>
+    </section>
+</main>
+<script src="/app/assets/js/common.js" defer></script>
+<script src="/app/assets/js/debtors-list.js" defer></script>
+</body>
+</html>

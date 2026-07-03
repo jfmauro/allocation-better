@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Debtor Intake | PipelinePro</title>
+    <link rel="stylesheet" href="/app/assets/css/styles.css">
+</head>
+<body>
+<main class="app-shell" role="main">
+    <header class="app-header">
+        <p class="brand">PipelinePro</p>
+        <h1 class="page-title">Debtor Intake</h1>
+        <p class="page-subtitle">Create debtor master data records with required idempotency and correlation headers.</p>
+        <nav aria-label="Main navigation">
+            <ul class="nav-list">
+                <li><a href="/app/debtors/create.html" aria-current="page">Debtor Create</a></li>
+                <li><a href="/app/debtors/list.html">Debtor List</a></li>
+                <li><a href="/app/debts/create.html">Debt Create</a></li>
+                <li><a href="/app/payments/intake.html">Payment Intake</a></li>
+                <li><a href="/app/proposals/list.html">Proposal Queue</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <section class="card" aria-labelledby="debtor-create-heading">
+        <h2 id="debtor-create-heading">Create debtor</h2>
+        <div id="debtor-create-banner" class="status-banner status-info" hidden></div>
+        <form id="debtor-create-form" novalidate>
+            <div class="grid grid-2">
+                <div>
+                    <label for="debtor-type">Debtor type</label>
+                    <select id="debtor-type" name="debtorType" required>
+                        <option value="ENTERPRISE" selected>ENTERPRISE</option>
+                        <option value="NATURAL_PERSON">NATURAL_PERSON</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="display-name">Display name</label>
+                    <input id="display-name" name="displayName" maxlength="160" required>
+                </div>
+                <div id="enterprise-number-field">
+                    <label for="enterprise-number">Enterprise number</label>
+                    <input id="enterprise-number" name="enterpriseNumber" maxlength="32" placeholder="Required for ENTERPRISE">
+                </div>
+                <div id="national-number-field" hidden>
+                    <label for="national-number">National number</label>
+                    <input id="national-number" name="nationalNumber" maxlength="32" placeholder="Required for NATURAL_PERSON">
+                </div>
+            </div>
+
+            <p class="helper">ENTERPRISE requires enterprise number. NATURAL_PERSON requires national number.</p>
+            <div class="button-row">
+                <button type="submit" class="btn btn-primary" id="debtor-create-submit">Create debtor</button>
+                <button type="reset" class="btn btn-ghost" id="debtor-create-reset">Reset</button>
+            </div>
+        </form>
+    </section>
+
+    <section class="card" aria-labelledby="debtor-create-response-heading">
+        <h2 id="debtor-create-response-heading">Latest response</h2>
+        <pre id="debtor-create-result" class="muted" aria-live="polite">No debtor submitted yet.</pre>
+    </section>
+</main>
+<script src="/app/assets/js/common.js" defer></script>
+<script src="/app/assets/js/debtors-create.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Proposal Queue | PipelinePro</title>
+    <link rel="stylesheet" href="/app/assets/css/styles.css">
+</head>
+<body>
+<main class="app-shell" role="main">
+    <header class="app-header">
+        <p class="brand">PipelinePro</p>
+        <h1 class="page-title">Proposal Queue</h1>
+        <p class="page-subtitle">Filter and prioritize allocation proposals for validation workload.</p>
+        <nav aria-label="Main navigation">
+            <ul class="nav-list">
+                <li><a href="/app/payments/intake.html">Intake</a></li>
+                <li><a href="/app/payments/detail.html">Payment Detail</a></li>
+                <li><a href="/app/proposals/list.html" aria-current="page">Proposal Queue</a></li>
+                <li><a href="/app/proposals/validate.html">Validate Proposal</a></li>
+                <li><a href="/app/debts/create.html">Debt Create</a></li>
+                <li><a href="/app/debts/search.html">Debt Search</a></li>
+                <li><a href="/app/allocations/detail.html">Allocation Detail</a></li>
+                <li><a href="/app/audit/access-log.html">Audit Log</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <section class="card" aria-labelledby="proposal-query-heading">
+        <h2 id="proposal-query-heading">Fetch proposals by payment</h2>
+        <div class="grid grid-2">
+            <div>
+                <label for="payment-id">Payment ID</label>
+                <input id="payment-id" placeholder="UUID">
+            </div>
+            <div>
+                <label for="status-filter">Status filter</label>
+                <select id="status-filter">
+                    <option value="ALL">All statuses</option>
+                    <option value="PROPOSED">Proposed</option>
+                    <option value="VALIDATED">Validated</option>
+                    <option value="REJECTED">Rejected</option>
+                    <option value="UNMATCHED">Unmatched</option>
+                    <option value="INVESTIGATION">Investigation</option>
+                </select>
+            </div>
+        </div>
+        <div class="button-row">
+            <button type="button" class="btn btn-primary" id="load-proposals">Load queue</button>
+            <button type="button" class="btn btn-ghost" id="sort-updated">Sort by updated desc</button>
+        </div>
+        <div id="proposal-banner" class="status-banner status-info" hidden></div>
+    </section>
+
+    <section class="card" aria-labelledby="queue-kpis-heading">
+        <h2 id="queue-kpis-heading">Workload counters</h2>
+        <div id="queue-kpis" class="kpi-grid"></div>
+    </section>
+
+    <section class="card" aria-labelledby="queue-table-heading">
+        <h2 id="queue-table-heading">Proposal list</h2>
+        <div id="proposal-table" class="table-wrap" aria-live="polite"></div>
+    </section>
+</main>
+<script src="/app/assets/js/common.js" defer></script>
+<script src="/app/assets/js/proposals-list.js" defer></script>
+</body>
+</html>

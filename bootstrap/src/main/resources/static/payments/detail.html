@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Payment Detail | PipelinePro</title>
+    <link rel="stylesheet" href="/app/assets/css/styles.css">
+</head>
+<body>
+<main class="app-shell" role="main">
+    <header class="app-header">
+        <p class="brand">PipelinePro</p>
+        <h1 class="page-title">Payment Detail & Match Timeline</h1>
+        <p class="page-subtitle">Inspect payment status, sensitive values, and trigger matching actions.</p>
+        <nav aria-label="Main navigation">
+            <ul class="nav-list">
+                <li><a href="/app/payments/intake.html">Intake</a></li>
+                <li><a href="/app/payments/detail.html" aria-current="page">Payment Detail</a></li>
+                <li><a href="/app/proposals/list.html">Proposal Queue</a></li>
+                <li><a href="/app/proposals/validate.html">Validate Proposal</a></li>
+                <li><a href="/app/debts/create.html">Debt Create</a></li>
+                <li><a href="/app/debts/search.html">Debt Search</a></li>
+                <li><a href="/app/allocations/detail.html">Allocation Detail</a></li>
+                <li><a href="/app/audit/access-log.html">Audit Log</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <section class="card" aria-labelledby="payment-query-heading">
+        <h2 id="payment-query-heading">Load payment</h2>
+        <div class="grid grid-2">
+            <div>
+                <label for="payment-id">Payment ID</label>
+                <input id="payment-id" name="paymentId" placeholder="UUID" required>
+            </div>
+            <div class="button-row align-end">
+                <button type="button" id="load-payment" class="btn btn-primary">Load details</button>
+            </div>
+        </div>
+        <div id="payment-banner" class="status-banner status-info" hidden></div>
+    </section>
+
+    <section class="card" aria-labelledby="payment-state-heading">
+        <h2 id="payment-state-heading">State</h2>
+        <div id="payment-state" class="kpi-grid" aria-live="polite"></div>
+    </section>
+
+    <section class="card" aria-labelledby="matching-actions-heading">
+        <h2 id="matching-actions-heading">Matching actions</h2>
+        <div class="button-row">
+            <button type="button" class="btn btn-secondary" data-action="structured-communication">Structured communication</button>
+            <button type="button" class="btn btn-secondary" data-action="identifier">Identifier</button>
+            <button type="button" class="btn btn-secondary" data-action="name">Name</button>
+            <button type="button" class="btn btn-ghost" data-action="match">Generic match</button>
+        </div>
+        <pre id="matching-result" class="muted">No match action executed yet.</pre>
+    </section>
+
+    <section class="card" aria-labelledby="proposal-summary-heading">
+        <h2 id="proposal-summary-heading">Related proposals</h2>
+        <div id="proposal-container" class="table-wrap" aria-live="polite"></div>
+    </section>
+</main>
+<script src="/app/assets/js/common.js" defer></script>
+<script src="/app/assets/js/payments-detail.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Allocation Detail | PipelinePro</title>
+    <link rel="stylesheet" href="/app/assets/css/styles.css">
+</head>
+<body>
+<main class="app-shell" role="main">
+    <header class="app-header">
+        <p class="brand">PipelinePro</p>
+        <h1 class="page-title">Allocation Detail</h1>
+        <p class="page-subtitle">Review allocation result, payment/debt context, and execution metadata.</p>
+        <nav aria-label="Main navigation">
+            <ul class="nav-list">
+                <li><a href="/app/payments/intake.html">Intake</a></li>
+                <li><a href="/app/payments/detail.html">Payment Detail</a></li>
+                <li><a href="/app/proposals/list.html">Proposal Queue</a></li>
+                <li><a href="/app/proposals/validate.html">Validate Proposal</a></li>
+                <li><a href="/app/debts/create.html">Debt Create</a></li>
+                <li><a href="/app/debts/search.html">Debt Search</a></li>
+                <li><a href="/app/allocations/detail.html" aria-current="page">Allocation Detail</a></li>
+                <li><a href="/app/audit/access-log.html">Audit Log</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <section class="card" aria-labelledby="allocation-query-heading">
+        <h2 id="allocation-query-heading">Load allocation</h2>
+        <div class="grid grid-2">
+            <div>
+                <label for="allocation-id">Allocation ID</label>
+                <input id="allocation-id" placeholder="UUID" required>
+            </div>
+            <div class="button-row">
+                <button type="button" class="btn btn-primary" id="load-allocation">Load allocation</button>
+            </div>
+        </div>
+        <div id="allocation-banner" class="status-banner status-info" hidden></div>
+    </section>
+
+    <section class="card" aria-labelledby="allocation-summary-heading">
+        <h2 id="allocation-summary-heading">Allocation summary</h2>
+        <div id="allocation-summary" class="kpi-grid"></div>
+    </section>
+
+    <section class="card" aria-labelledby="allocation-context-heading">
+        <h2 id="allocation-context-heading">Payment / debt context</h2>
+        <div id="allocation-context" class="table-wrap"></div>
+    </section>
+
+    <section class="card" aria-labelledby="allocation-delta-heading">
+        <h2 id="allocation-delta-heading">Payment/debt balance delta</h2>
+        <div id="allocation-balance-delta" class="kpi-grid" aria-live="polite"></div>
+    </section>
+
+    <section class="card" aria-labelledby="allocation-audit-heading">
+        <h2 id="allocation-audit-heading">Audit trace summary</h2>
+        <div id="allocation-audit-summary" class="table-wrap" aria-live="polite"></div>
+    </section>
+</main>
+<script src="/app/assets/js/common.js" defer></script>
+<script src="/app/assets/js/allocations-detail.js" defer></script>
+</body>
+</html>

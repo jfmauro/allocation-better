@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Access Log | PipelinePro</title>
+    <link rel="stylesheet" href="/app/assets/css/styles.css">
+</head>
+<body>
+<main class="app-shell" role="main">
+    <header class="app-header">
+        <p class="brand">PipelinePro</p>
+        <h1 class="page-title">Audit & Sensitive Access Log</h1>
+        <p class="page-subtitle">Filter NISS access events by actor, reason, and date range.</p>
+        <nav aria-label="Main navigation">
+            <ul class="nav-list">
+                <li><a href="/app/payments/intake.html">Intake</a></li>
+                <li><a href="/app/payments/detail.html">Payment Detail</a></li>
+                <li><a href="/app/proposals/list.html">Proposal Queue</a></li>
+                <li><a href="/app/proposals/validate.html">Validate Proposal</a></li>
+                <li><a href="/app/debts/create.html">Debt Create</a></li>
+                <li><a href="/app/debts/search.html">Debt Search</a></li>
+                <li><a href="/app/allocations/detail.html">Allocation Detail</a></li>
+                <li><a href="/app/audit/access-log.html" aria-current="page">Audit Log</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <section class="card" aria-labelledby="log-filter-heading">
+        <h2 id="log-filter-heading">Filters</h2>
+        <div class="grid grid-2">
+            <div>
+                <label for="filter-actor">Actor</label>
+                <input id="filter-actor" placeholder="user identifier">
+            </div>
+            <div>
+                <label for="filter-reason">Reason contains</label>
+                <input id="filter-reason" placeholder="investigation / manual validation">
+            </div>
+            <div>
+                <label for="filter-from">From date</label>
+                <input id="filter-from" type="date">
+            </div>
+            <div>
+                <label for="filter-to">To date</label>
+                <input id="filter-to" type="date">
+            </div>
+        </div>
+        <div class="button-row">
+            <button type="button" class="btn btn-primary" id="load-access-logs">Load access logs</button>
+            <button type="button" class="btn btn-ghost" id="clear-log-filters">Clear filters</button>
+        </div>
+        <div id="audit-banner" class="status-banner status-info" hidden></div>
+    </section>
+
+    <section class="card" aria-labelledby="log-table-heading">
+        <h2 id="log-table-heading">Access events</h2>
+        <div id="audit-table" class="table-wrap" aria-live="polite"></div>
+    </section>
+</main>
+<script src="/app/assets/js/common.js" defer></script>
+<script src="/app/assets/js/audit-access-log.js" defer></script>
+</body>
+</html>

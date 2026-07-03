@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Debt Intake | PipelinePro</title>
+    <link rel="stylesheet" href="/app/assets/css/styles.css">
+</head>
+<body>
+<main class="app-shell" role="main">
+    <header class="app-header">
+        <p class="brand">PipelinePro</p>
+        <h1 class="page-title">Debt Intake</h1>
+        <p class="page-subtitle">Create debt records for an existing debtor with restricted opening status values.</p>
+        <nav aria-label="Main navigation">
+            <ul class="nav-list">
+                <li><a href="/app/debtors/create.html">Debtor Create</a></li>
+                <li><a href="/app/debtors/list.html">Debtor List</a></li>
+                <li><a href="/app/debts/create.html" aria-current="page">Debt Create</a></li>
+                <li><a href="/app/debts/search.html">Debt Search</a></li>
+                <li><a href="/app/payments/intake.html">Payment Intake</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <section class="card" aria-labelledby="debt-create-heading">
+        <h2 id="debt-create-heading">Create debt</h2>
+        <div id="debt-create-banner" class="status-banner status-info" hidden></div>
+
+        <form id="debt-create-form" novalidate>
+            <div class="grid grid-2">
+                <div>
+                    <label for="debtor-query">Debtor search for selector</label>
+                    <input id="debtor-query" maxlength="120" placeholder="Optional search term">
+                </div>
+                <div class="button-row align-end">
+                    <button type="button" id="load-debtor-options" class="btn btn-secondary">Load debtor options</button>
+                </div>
+                <div>
+                    <label for="debtor-select">Debtor selector</label>
+                    <select id="debtor-select">
+                        <option value="">No debtor loaded</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="debtor-id">Debtor ID reference</label>
+                    <input id="debtor-id" name="debtorId" required placeholder="UUID">
+                </div>
+                <div>
+                    <label for="debt-reference">Debt reference</label>
+                    <input id="debt-reference" name="reference" maxlength="120" required>
+                </div>
+                <div>
+                    <label for="original-amount">Original amount</label>
+                    <input id="original-amount" name="originalAmount" type="number" min="0.01" step="0.01" required>
+                </div>
+                <div>
+                    <label for="currency">Currency</label>
+                    <select id="currency" name="currency" required>
+                        <option value="EUR" selected>EUR</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="opening-status">Opening status</label>
+                    <select id="opening-status" name="openingStatus" required>
+                        <option value="OPEN" selected>OPEN</option>
+                        <option value="PARTIALLY_PAID">PARTIALLY_PAID</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="due-date">Due date (optional)</label>
+                    <input id="due-date" name="dueDate" type="date">
+                </div>
+                <div>
+                    <label for="idempotency-key">Idempotency-Key header</label>
+                    <input id="idempotency-key" name="idempotencyKey" maxlength="120" required>
+                </div>
+                <div>
+                    <label for="correlation-id">X-Correlation-Id header</label>
+                    <input id="correlation-id" name="correlationId" maxlength="64" required>
+                </div>
+            </div>
+
+            <p class="helper">Opening status is limited to OPEN and PARTIALLY_PAID.</p>
+            <div class="button-row">
+                <button type="submit" class="btn btn-primary" id="debt-create-submit">Create debt</button>
+                <button type="reset" class="btn btn-ghost" id="debt-create-reset">Reset</button>
+            </div>
+        </form>
+    </section>
+
+    <section class="card" aria-labelledby="debt-create-response-heading">
+        <h2 id="debt-create-response-heading">Latest response</h2>
+        <pre id="debt-create-result" class="muted" aria-live="polite">No debt submitted yet.</pre>
+    </section>
+</main>
+<script src="/app/assets/js/common.js" defer></script>
+<script src="/app/assets/js/debts-create.js" defer></script>
+</body>
+</html>

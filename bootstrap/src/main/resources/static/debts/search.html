@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Debt Search | PipelinePro</title>
+    <link rel="stylesheet" href="/app/assets/css/styles.css">
+</head>
+<body>
+<main class="app-shell" role="main">
+    <header class="app-header">
+        <p class="brand">PipelinePro</p>
+        <h1 class="page-title">Debt Search & Selection</h1>
+        <p class="page-subtitle">Search debts by debtor and filter allocatable statuses.</p>
+        <nav aria-label="Main navigation">
+            <ul class="nav-list">
+                <li><a href="/app/payments/intake.html">Intake</a></li>
+                <li><a href="/app/payments/detail.html">Payment Detail</a></li>
+                <li><a href="/app/proposals/list.html">Proposal Queue</a></li>
+                <li><a href="/app/proposals/validate.html">Validate Proposal</a></li>
+                <li><a href="/app/debts/search.html" aria-current="page">Debt Search</a></li>
+                <li><a href="/app/allocations/detail.html">Allocation Detail</a></li>
+                <li><a href="/app/audit/access-log.html">Audit Log</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <section class="card" aria-labelledby="search-heading">
+        <h2 id="search-heading">Search criteria</h2>
+        <div class="grid grid-2">
+            <div>
+                <label for="debtor-id">Debtor ID</label>
+                <input id="debtor-id" placeholder="UUID">
+            </div>
+            <fieldset>
+                <legend class="sr-only">Debt statuses</legend>
+                <label><input type="checkbox" name="status" value="OPEN" checked> OPEN</label>
+                <label><input type="checkbox" name="status" value="PARTIALLY_PAID" checked> PARTIALLY_PAID</label>
+            </fieldset>
+        </div>
+        <button type="button" id="search-debts" class="btn btn-primary">Search debts</button>
+        <div id="debt-banner" class="status-banner status-info" hidden></div>
+    </section>
+
+    <section class="card" aria-labelledby="debt-list-heading">
+        <h2 id="debt-list-heading">Debtor debts</h2>
+        <div id="debt-table" class="table-wrap" aria-live="polite"></div>
+    </section>
+
+    <section class="card" aria-labelledby="debt-detail-heading">
+        <h2 id="debt-detail-heading">Debt detail</h2>
+        <div id="debt-detail" class="muted">Select a debt row to load details.</div>
+    </section>
+</main>
+<script src="/app/assets/js/common.js" defer></script>
+<script src="/app/assets/js/debts-search.js" defer></script>
+</body>
+</html>

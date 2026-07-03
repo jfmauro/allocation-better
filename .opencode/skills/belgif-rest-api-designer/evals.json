@@ -1,0 +1,13 @@
+{
+  "skill_name": "belgif-rest-api-designer",
+  "evals": [
+    {
+      "prompt": "Design a Belgif-compliant REST API for managing declarations",
+      "expected_behavior": "Produces resource model, URI map, methods, status codes, problem responses, OpenAPI/security/pagination notes."
+    },
+    {
+      "prompt": "Review this OpenAPI against Belgif",
+      "expected_behavior": "Classifies findings as MUST FIX, SHOULD FIX, ACCEPTABLE or ASSUMPTION and references checklist categories."
+    }
+  ]
+}
