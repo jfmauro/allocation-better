@@ -6,7 +6,8 @@ description: >-
   that additionally verify the preserved contract and the non-regression
   on pre-existing tests. Read-only reviewer that never edits code. Returns
   APPROVED or CHANGES_REQUESTED with a concrete list of deviations. Invoke
-  after every implementation step as the first review gate.
+  at the review cadence defined by the review-cadence parameter of
+  .opencode/commands/build.md, as the first review gate.
 mode: subagent
 temperature: 0.1
 permission:

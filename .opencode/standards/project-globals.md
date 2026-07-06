@@ -14,6 +14,11 @@ opencode.json. It complements AGENTS.md and must not duplicate its content.
 
 ## Maven execution policy addendum
 
-- Specialist engineer subagents never invoke mvn themselves, in any form.
-- Only the orchestrator invokes mvn, exactly once per layer, per AGENTS.md
-  and .opencode/commands/build.md.
+## Maven execution policy addendum
+
+- Specialist engineer subagents never invoke mvn themselves, in any form,
+  except test-engineer, which requires actual multi-threaded execution to
+  verify concurrency invariants and may run mvn -q test -pl bootstrap
+  directly for that purpose.
+- Only the orchestrator invokes mvn for all other layers, exactly once per
+  layer, per AGENTS.md and .opencode/commands/build.md.
