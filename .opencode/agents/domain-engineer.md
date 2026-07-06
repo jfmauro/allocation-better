@@ -30,7 +30,7 @@ You handle two modules:
 
 ## Mandatory constraints
 
-- Java 21 features: records, sealed classes, pattern matching where appropriate.
+- Java version, TDD granularity, and logging scope: see .opencode/standards/project-globals.md and AGENTS.md.
 - Domain module: ZERO imports from Spring, JPA, Hibernate, web, or messaging.
 - Application module: depends on domain only.
 - Constructor injection only; never field injection.
@@ -41,11 +41,9 @@ You handle two modules:
 
 ## TDD workflow (vertical slices)
 
-For each class:
-1. Write the JUnit5 test first (RED) -- test one behavior.
-2. Implement just enough code to pass (GREEN).
-3. Refactor if needed.
-4. Repeat for next behavior.
+-Follow the class-level TDD granularity defined in AGENTS.md: write the full test class first (RED).
+- then implement the class to green (GREEN), then refactor. 
+- The vertical slice is the class, not the method.
 
 Never write all tests first then all implementation.
 

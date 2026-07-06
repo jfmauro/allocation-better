@@ -28,7 +28,8 @@ You handle two modules:
 
 ## Mandatory constraints
 
-- Java 21, Spring Boot 4.x.
+- Java version: see .opencode/standards/project-globals.md.
+- Spring Boot 4.x.
 - adapter-in depends on application module (calls inbound use case ports).
 - bootstrap depends on all modules, assembles the runtime application.
 - Constructor injection only.

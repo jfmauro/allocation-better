@@ -5,7 +5,14 @@
   "small_model": "openai/fait-gpt-5.4-Custom",
   "enabled_providers": ["openai"],
   "lsp": true,
-  "instructions": ["DESIGN.md"],
+  "compaction": {
+    "auto": true,
+    "prune": true,
+    "reserved": 10000
+  },
+  "instructions": [
+    ".opencode/standards/project-globals.md"
+  ],
   "permission": {
     "bash": "ask",
     "edit": "ask",

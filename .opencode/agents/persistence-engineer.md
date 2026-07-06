@@ -31,7 +31,8 @@ You handle the adapter-out module only. This module:
 
 ## Mandatory constraints
 
-- Java 21, Spring Boot 4.x.
+- Java version: see .opencode/standards/project-globals.md.
+- Spring Boot 4.x.
 - Constructor injection only.
 - Lombok and MapStruct allowed and expected.
 - Every public method: log with `+++` prefix/suffix via SLF4J.

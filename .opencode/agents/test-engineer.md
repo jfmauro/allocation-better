@@ -28,7 +28,8 @@ test source set since integration tests need the full application context.
 
 ## Mandatory constraints
 
-- Java 21, JUnit5, Spring Boot Test.
+- Java version: see .opencode/standards/project-globals.md.
+- JUnit5, Spring Boot Test.
 - All code, comments, and text in English.
 - Every test method name describes the behavior being tested.
 - Tests are independent, atomic, and repeatable.
