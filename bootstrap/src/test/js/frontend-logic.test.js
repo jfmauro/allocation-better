@@ -76,11 +76,12 @@ test("debt search only keeps allowed statuses", () => {
     const filtered = debtsSearch.filterAllocatableDebts([
         { id: "a", status: "OPEN" },
         { id: "b", status: "PARTIALLY_PAID" },
-        { id: "c", status: "CLOSED" }
+        { id: "c", status: "PAID" },
+        { id: "d", status: "CLOSED" }
     ]);
 
-    assert.deepEqual(filtered.map((item) => item.id), ["a", "b"]);
+    assert.deepEqual(filtered.map((item) => item.id), ["a", "b", "c"]);
 
-    const selected = debtsSearch.getSelectedAllocatableStatuses(["OPEN", "CLOSED", "PARTIALLY_PAID"]);
-    assert.deepEqual(selected, ["OPEN", "PARTIALLY_PAID"]);
+    const selected = debtsSearch.getSelectedAllocatableStatuses(["OPEN", "CLOSED", "PAID", "PARTIALLY_PAID"]);
+    assert.deepEqual(selected, ["OPEN", "PAID", "PARTIALLY_PAID"]);
 });

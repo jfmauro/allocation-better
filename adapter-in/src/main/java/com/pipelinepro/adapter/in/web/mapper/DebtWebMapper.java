@@ -30,6 +30,7 @@ public interface DebtWebMapper {
 
     @Mapping(target = "id", expression = "java(debt.id())")
     @Mapping(target = "debtorId", expression = "java(debt.debtorId())")
+    @Mapping(target = "originalAmount", expression = "java(debt.originalAmount())")
     @Mapping(target = "remainingAmount", expression = "java(debt.remainingAmount())")
     @Mapping(target = "currency", expression = "java(debt.currency())")
     @Mapping(target = "status", expression = "java(debt.status())")

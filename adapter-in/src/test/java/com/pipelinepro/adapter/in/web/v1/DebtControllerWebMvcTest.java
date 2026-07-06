@@ -60,6 +60,7 @@ class DebtControllerWebMvcTest {
                 debtId,
                 debtorId,
                 new BigDecimal("100.00"),
+                new BigDecimal("100.00"),
                 "EUR",
                 DebtStatus.OPEN,
                 null,
@@ -96,7 +97,9 @@ class DebtControllerWebMvcTest {
                                 }
                                 """.formatted(debtorId)))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.id").value(debtId.toString()));
+                .andExpect(jsonPath("$.id").value(debtId.toString()))
+                .andExpect(jsonPath("$.originalAmount").value(100.00))
+                .andExpect(jsonPath("$.remainingAmount").value(100.00));
     }
 
     @Test
@@ -251,6 +254,7 @@ class DebtControllerWebMvcTest {
                         debt.id(),
                         debtorId,
                         new BigDecimal("100.00"),
+                        new BigDecimal("100.00"),
                         "EUR",
                         DebtStatus.OPEN,
                         null,
@@ -265,7 +269,9 @@ class DebtControllerWebMvcTest {
 
         mockMvc.perform(get("/debtors/{debtorId}/debts", debtorId))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.debtorId").value(debtorId.toString()));
+                .andExpect(jsonPath("$.debtorId").value(debtorId.toString()))
+                .andExpect(jsonPath("$.debts[0].originalAmount").value(100.00))
+                .andExpect(jsonPath("$.debts[0].remainingAmount").value(100.00));
     }
 
     @Test

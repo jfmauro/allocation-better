@@ -1,4 +1,4 @@
-const DEBTS_SEARCH_ALLOWED_STATUSES = new Set(["OPEN", "PARTIALLY_PAID"]);
+const DEBTS_SEARCH_ALLOWED_STATUSES = new Set(["OPEN", "PARTIALLY_PAID", "PAID"]);
 
 function filterAllocatableDebts(debts, allowedStatuses = DEBTS_SEARCH_ALLOWED_STATUSES) {
     return (Array.isArray(debts) ? debts : []).filter((debt) => allowedStatuses.has(String(debt?.status || "")));
@@ -6,6 +6,27 @@ function filterAllocatableDebts(debts, allowedStatuses = DEBTS_SEARCH_ALLOWED_ST
 
 function getSelectedAllocatableStatuses(values, allowedStatuses = DEBTS_SEARCH_ALLOWED_STATUSES) {
     return (Array.isArray(values) ? values : []).filter((status) => allowedStatuses.has(String(status || "")));
+}
+
+function buildDebtSearchStatusQuery(values, allowedStatuses = DEBTS_SEARCH_ALLOWED_STATUSES) {
+    const query = new URLSearchParams();
+    getSelectedAllocatableStatuses(values, allowedStatuses).forEach((status) => query.append("status", status));
+    return query.toString();
+}
+
+function getDebtTableHeaders() {
+    return ["Debt ID", "Status", "Original amount", "Due date", "Updated"];
+}
+
+function buildDebtDetailFields(debt) {
+    return [
+        ["Debt ID", displayText(debt.id)],
+        ["Debtor ID", displayText(debt.debtorId)],
+        ["Status", displayText(debt.status)],
+        ["Remaining", formatMoney(debt.remainingAmount, debt.currency)],
+        ["Structured communication", displayText(debt.structuredCommunication)],
+        ["Free communication", displayText(debt.freeCommunication)]
+    ];
 }
 
 if (typeof document !== "undefined") {
@@ -36,18 +57,17 @@ if (typeof document !== "undefined") {
             );
 
             if (!selectedStatuses.length) {
-                setBanner(banner, "error", "Select at least one allocatable status: OPEN or PARTIALLY_PAID.");
+                setBanner(banner, "error", "Select at least one status: OPEN, PARTIALLY_PAID, or PAID.");
                 return;
             }
 
-            const query = new URLSearchParams();
-            selectedStatuses.forEach((status) => query.append("status", status));
+            const queryString = buildDebtSearchStatusQuery(selectedStatuses);
 
             searchButton.disabled = true;
             setBanner(banner, "info", "Loading debtor debts...");
             try {
                 const safeDebtorId = encodePathSegment(debtorId);
-                const response = await fetchJson(getApiUrl(`/debtors/${safeDebtorId}/debts?${query.toString()}`));
+                const response = await fetchJson(getApiUrl(`/debtors/${safeDebtorId}/debts?${queryString}`));
                 const debts = filterAllocatableDebts(response?.debts || []);
                 renderDebtTable(debts);
                 setBanner(banner, "success", "Debts loaded.");
@@ -71,7 +91,7 @@ if (typeof document !== "undefined") {
             const table = document.createElement("table");
             const head = document.createElement("thead");
             const headRow = document.createElement("tr");
-            ["Debt ID", "Status", "Remaining", "Due date", "Updated"].forEach((title) => {
+            getDebtTableHeaders().forEach((title) => {
                 const th = document.createElement("th");
                 th.textContent = title;
                 headRow.appendChild(th);
@@ -100,8 +120,8 @@ if (typeof document !== "undefined") {
                 statusChip.textContent = displayText(debt.status);
                 statusCell.appendChild(statusChip);
 
-                const remainingCell = document.createElement("td");
-                remainingCell.textContent = formatMoney(debt.remainingAmount, debt.currency);
+                const originalAmountCell = document.createElement("td");
+                originalAmountCell.textContent = formatMoney(debt.originalAmount, debt.currency);
 
                 const dueDateCell = document.createElement("td");
                 dueDateCell.textContent = displayText(debt.dueDate);
@@ -109,7 +129,7 @@ if (typeof document !== "undefined") {
                 const updatedCell = document.createElement("td");
                 updatedCell.textContent = formatDateTime(debt.updatedAt);
 
-                row.append(debtCell, statusCell, remainingCell, dueDateCell, updatedCell);
+                row.append(debtCell, statusCell, originalAmountCell, dueDateCell, updatedCell);
                 body.appendChild(row);
             });
 
@@ -126,14 +146,7 @@ if (typeof document !== "undefined") {
                 const grid = document.createElement("div");
                 grid.className = "kpi-grid";
 
-                const fields = [
-                    ["Debt ID", displayText(debt.id)],
-                    ["Debtor ID", displayText(debt.debtorId)],
-                    ["Status", displayText(debt.status)],
-                    ["Remaining", formatMoney(debt.remainingAmount, debt.currency)],
-                    ["Structured communication", displayText(debt.structuredCommunication)],
-                    ["Free communication", displayText(debt.freeCommunication)]
-                ];
+                const fields = buildDebtDetailFields(debt);
 
                 fields.forEach(([label, value]) => {
                     const cell = document.createElement("div");
@@ -170,6 +183,9 @@ if (typeof module !== "undefined" && module.exports) {
     module.exports = {
         DEBTS_SEARCH_ALLOWED_STATUSES,
         filterAllocatableDebts,
-        getSelectedAllocatableStatuses
+        getSelectedAllocatableStatuses,
+        buildDebtSearchStatusQuery,
+        getDebtTableHeaders,
+        buildDebtDetailFields
     };
 }

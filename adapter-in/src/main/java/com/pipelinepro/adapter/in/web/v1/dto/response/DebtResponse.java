@@ -9,6 +9,7 @@ import java.util.UUID;
 public record DebtResponse(
         UUID id,
         UUID debtorId,
+        java.math.BigDecimal originalAmount,
         java.math.BigDecimal remainingAmount,
         String currency,
         DebtStatus status,

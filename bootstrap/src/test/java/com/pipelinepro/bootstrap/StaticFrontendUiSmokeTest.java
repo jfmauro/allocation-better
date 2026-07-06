@@ -34,6 +34,12 @@ class StaticFrontendUiSmokeTest {
         assertPageContains("/app/debtors/list.html", "Debtor Master Data", "/app/assets/js/debtors-list.js");
         assertPageContains("/app/debts/create.html", "Debt Intake", "/app/assets/js/debts-create.js");
         assertPageContains("/app/debts/search.html", "Debt Search & Selection", "/app/assets/js/debts-search.js");
+
+        HttpResponse<String> debtSearchResponse = sendGet("/app/debts/search.html");
+        assertThat(debtSearchResponse.body())
+                .contains("<input type=\"checkbox\" name=\"status\" value=\"OPEN\" checked>")
+                .contains("<input type=\"checkbox\" name=\"status\" value=\"PARTIALLY_PAID\" checked>")
+                .contains("<input type=\"checkbox\" name=\"status\" value=\"PAID\">");
     }
 
     private void assertPageContains(String path, String headingText, String scriptPath) {
