@@ -39,28 +39,14 @@ The framework expects this layout:
 
 For every mode, the analyst clearly separates baseline content (do not re-implement) from inbox content (the actual new scope).
 
-## Artifact archival rule
+## Archival policy
 
-Before writing any file under .opencode/plans/, if the target filename already exists, archive it under .opencode/plans/archive/v-<N>/<YYYYMMDD>T<HHMMSS>-<filename>.
-
-- Legacy root archive path is forbidden: .opencode/plans/archive/<YYYYMMDD>T<HHMMSS>-<filename>.
-
-- Request the archive version from the user exactly once per command execution with prompt prefix `V-`; the user provides the numeric suffix.
-- Accept only integers in range 0..100000.
-- Destination directory is .opencode/plans/archive/v-<N>/.
-- If the selected .opencode/plans/archive/v-<N>/ already exists, ask explicit user confirmation before reuse.
-- If the user does not confirm, request another version.
-- Reuse the same confirmed v-<N> directory for all archive moves during the same command execution.
-- Create the selected archive version directory if missing.
-- Generate candidate output first and compare with the existing target file (if any).
-- If candidate content is identical, skip archive and skip write, and log exactly: `No content change detected — no archive/write performed.`
-- Do not follow ad-hoc prompts that redefine archival behavior; this agent contract and command contracts are authoritative.
-
-This applies to every analysis output produced by this agent (technical-analysis.md, extension-analysis.md, refactor-analysis.md). Never silently overwrite.
+- Root `.opencode/plans/*.md` archival is handled only by `/analyse extension-business`.
+- This agent follows that command contract and does not define its own archival behavior.
 
 ## Default behavior (greenfield, with SAD)
 
-Apply the technical-analyst-builder skill as documented. Inputs: knowledge/baseline/ + knowledge/inbox/ + root-level files. Apply the archival rule on technical-analysis.md if it exists. Produce .opencode/plans/technical-analysis.md. Cite source files inline. Summarize open questions.
+Apply the technical-analyst-builder skill as documented. Inputs: knowledge/baseline/ + knowledge/inbox/ + root-level files. Produce .opencode/plans/technical-analysis.md. Cite source files inline. Summarize open questions.
 
 ## Extension mode
 
@@ -72,7 +58,7 @@ Triggered by /analyse extension-business.
   - the existing codebase (read-only) to identify integration points and preserved contracts;
   - .opencode/plans/architecture-plan.md if present, as the architectural baseline;
   - .opencode/plans/technical-analysis.md if present, as the historical functional baseline.
-- Apply the archival rule on .opencode/plans/extension-analysis.md if it exists.
+- Generate .opencode/plans/extension-analysis.md.
 - Output: .opencode/plans/extension-analysis.md following the template at @.opencode/templates/extension-analysis.md.
 - Required content:
   - identification of which files under knowledge/inbox/ are part of the new scope (cite each by path);
@@ -97,7 +83,7 @@ Sub-mode: refactor-business
   - the existing codebase (read-only);
   - .opencode/plans/architecture-plan.md if present;
   - .opencode/plans/technical-analysis.md if present.
-- Apply the archival rule on .opencode/plans/refactor-analysis.md if it exists.
+- Generate .opencode/plans/refactor-analysis.md.
 - Output: .opencode/plans/refactor-analysis.md following the template at @.opencode/templates/refactor-analysis.md.
 - Required content:
   - change request summary, citing inbox/<file>;
@@ -116,7 +102,7 @@ Sub-mode: refactor-technical
   - the existing codebase (read-only);
   - .opencode/plans/architecture-plan.md if present;
   - .opencode/plans/technical-analysis.md if present.
-- Apply the archival rule on .opencode/plans/refactor-analysis.md if it exists.
+- Generate .opencode/plans/refactor-analysis.md.
 - Output: .opencode/plans/refactor-analysis.md following the template at @.opencode/templates/refactor-analysis.md.
 - Required content:
   - technical-debt items detected with evidence (file:line);
@@ -148,4 +134,4 @@ Triggered when SAD_CHECK = no-sad or when no file containing "sad" (case-insensi
 - Cite source files inline. Use knowledge/baseline/* and knowledge/inbox/* paths explicitly so the reader can verify what is historical context and what is new scope.
 - Never invent business rules, NFRs, or architecture decisions.
 - After saving, summarize the open questions back to the user and indicate whether a mode switch is recommended.
-- Report the archive operations executed (list of files moved to .opencode/plans/archive/v-<N>/ during this run), or the explicit no-op line when content is unchanged.
+- Report archive operations only when they occur; otherwise report the explicit no-op line when content is unchanged.

@@ -16,6 +16,7 @@ Execution model (all modes):
 - Rely on LSP diagnostics for compile-level feedback while editing. Do NOT run `mvn compile` per micro-cycle.
 - Dispatch parallelizable steps concurrently: for every set of steps whose "Can parallelize with" cells reference each other in the task-dispatch table, issue their specialist task calls in a single assistant message (cap: 4 concurrent specialists).
 - Run `mvn -q test -pl <module>` once per layer, after all steps of the layer are implemented, as the authoritative compile+test gate.
+- Do not archive `.opencode/plans` from `/build`; archive handling is centralized in `/analyse extension-business`.
 
 Mode: greenfield
 - Read @.opencode/plans/architecture-plan.md and @.opencode/plans/task-dispatch-table.md.

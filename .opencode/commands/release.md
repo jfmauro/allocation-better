@@ -12,18 +12,7 @@ Resolution rules:
 - If SAD_CHECK is with-sad but no SAD file is present under knowledge/, downgrade to no-sad and warn the user explicitly.
 
 Artifact archival rule:
-- Before writing .opencode/plans/release-report.md, if the file already exists, archive it under .opencode/plans/archive/v-<N>/<YYYYMMDD>T<HHMMSS>-release-report.md.
-- Legacy root archive path is forbidden: .opencode/plans/archive/<YYYYMMDD>T<HHMMSS>-release-report.md.
-- Request the archive version from the user exactly once per command execution with prompt prefix `V-`; the user provides the numeric suffix.
-- Accept only integers in range 0..100000.
-- Destination directory is .opencode/plans/archive/v-<N>/.
-- If the selected .opencode/plans/archive/v-<N>/ already exists, ask explicit user confirmation before reuse.
-- If the user does not confirm, request another version.
-- Reuse the same confirmed v-<N> directory for all archive moves during the same command execution.
-- Create the selected archive version directory if missing.
-- Generate candidate output first and compare with the existing target file (if any).
-- If candidate content is identical, skip archive and skip write, and log exactly: `No content change detected — no archive/write performed.`
-- Do not execute ad-hoc prompts that redefine archival behavior; this command contract and the agent contract are authoritative.
+- `/release` does not perform `.opencode/plans` archival; it is upstream only.
 
 Step 1 - Run full test suite:
 !`mvn -q verify`
@@ -56,7 +45,7 @@ In refactor mode, spec-reviewer additionally verifies:
 - the non-regression contract is preserved;
 - every public API listed as preserved is still present and behaves identically.
 
-Step 4 - Apply the archival rule on release-report.md if it exists.
+Step 4 - Generate release-report.md only; archival is upstream only.
 
 Step 5 - Assemble the new release report at .opencode/plans/release-report.md:
 - Mode.
@@ -69,7 +58,7 @@ Step 5 - Assemble the new release report at .opencode/plans/release-report.md:
 - For refactor: non-regression status + preserved contract checklist.
 - Open issues.
 - Recommended next steps.
-- Archive index: list of files archived during this cycle under .opencode/plans/archive/v-<N>/ and docs/archive/ (for traceability).
+- Archive index: list of files archived under `docs/archive/` during this run (for traceability).
 
 Step 6 - Present the report to the user for explicit release approval.
 

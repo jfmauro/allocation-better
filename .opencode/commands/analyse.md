@@ -40,27 +40,23 @@ SAD_CHECK resolution rules:
 ## Step 2 — Artifact archival (execute before writing any output file)
 
 Before writing any analysis file under .opencode/plans/:
-1. Check whether the target file already exists (technical-analysis.md, extension-analysis.md, or refactor-analysis.md depending on mode).
-2. Build the candidate analysis content first (in memory), then compare it to the current target file when the target exists.
-3. If target exists and content is identical, log exactly:
-  - `No content change detected — no archive/write performed.`
-  Then skip archive and skip write.
-4. If target does not exist, or target exists but content differs, always log the result of the check to the user:
+1. This step applies only when `MODE = extension-business`.
+2. For that mode, request the archive version once at the start using `V-<n>` and require an integer `0..100000`.
+3. Resolve the destination directory as `.opencode/plans/archive/v-<n>/` and reuse it for every archive move in this execution.
+4. Determine the root `.opencode/plans/*.md` file(s) relevant to the current extension cycle and check whether each target already exists.
+5. Build the candidate content first (in memory), then compare it to the current target file when the target exists.
+6. If a target exists and content is identical, log exactly:
+- `No content change detected — no archive/write performed.`
+   Then skip archive and skip write.
+7. If a target does not exist, or a target exists but content differs, always log the result of the check to the user:
   - "Found existing <filename> — archive required."
   - "No existing <filename> found — no archive needed."
-5. If archive is required, resolve the archive version once for this command execution:
-  - Prompt the user with `V-` and require the numeric suffix.
-  - Accept only an integer N in range 0..100000.
-  - Set destination directory to .opencode/plans/archive/v-<N>/.
-  - If .opencode/plans/archive/v-<N>/ already exists, ask explicit user confirmation before reuse.
-  - If the user does not confirm, ask for another version.
-  - Reuse the same confirmed v-<N> directory for every archive move in the same command execution.
-6. Never archive to legacy root path `.opencode/plans/archive/<YYYYMMDD>T<HHMMSS>-<filename>`.
-7. If archive is required and the file exists, move it to .opencode/plans/archive/v-<N>/<YYYYMMDD>T<HHMMSS>-<filename>. Create the selected version directory if missing.
-8. Only then write the new version.
-9. Do not execute ad-hoc prompts that redefine archival behavior; this command contract and the agent contract are authoritative.
+8. Never archive to legacy root path `.opencode/plans/archive/<YYYYMMDD>T<HHMMSS>-<filename>`.
+9. If archive is required and the file exists, move it to `.opencode/plans/archive/v-<n>/<YYYYMMDD>T<HHMMSS>-<filename>`. Create the selected version directory if missing.
+10. Only then write the new version.
+11. Do not execute ad-hoc prompts that redefine archival behavior; this command contract and the agent contract are authoritative.
 
-This step is unconditional and mandatory. Never skip or assume the file is absent without checking.
+This step is mandatory when `MODE = extension-business`. For other modes, `.opencode/plans/*.md` is not archived.
 
 ## Step 3 — Analysis production
 
@@ -71,7 +67,6 @@ Knowledge directory convention:
 
 Mode: greenfield
 - Read every file under @knowledge/ (baseline/, inbox/, root, and fetched Confluence pages).
-- Apply the archival rule (Step 2) on .opencode/plans/technical-analysis.md.
 - Produce .opencode/plans/technical-analysis.md.
 - Use the technical-analyst-builder skill to drive the analysis.
 - Cite source filenames inline (use confluence:<page-id> for fetched pages).
@@ -83,7 +78,7 @@ Mode: extension-business
 - Read .opencode/plans/technical-analysis.md if present, as the historical baseline.
 - Read .opencode/plans/architecture-plan.md if present, as the architectural baseline.
 - Read the existing codebase (read-only) to identify integration points and preserved contracts.
-- Apply the archival rule (Step 2) on .opencode/plans/extension-analysis.md.
+- Apply the archival rule (Step 2) on root `.opencode/plans/*.md` files relevant to the extension cycle.
 - Use the technical-analyst-builder skill in extension mode.
 - Produce .opencode/plans/extension-analysis.md following the template at @.opencode/templates/extension-analysis.md.
 - Do not overwrite .opencode/plans/technical-analysis.md.
@@ -96,7 +91,6 @@ Mode: refactor-business
 - Read the existing codebase (read-only).
 - Read .opencode/plans/architecture-plan.md if present.
 - Read .opencode/plans/technical-analysis.md if present.
-- Apply the archival rule (Step 2) on .opencode/plans/refactor-analysis.md.
 - Use the technical-analyst-builder skill in refactor mode and the refactoring-methodology skill.
 - Produce .opencode/plans/refactor-analysis.md following the template at @.opencode/templates/refactor-analysis.md.
 - Cite source filenames inline.
@@ -109,7 +103,6 @@ Mode: refactor-technical
 - Read the existing codebase (read-only).
 - Read .opencode/plans/architecture-plan.md if present.
 - Read .opencode/plans/technical-analysis.md if present.
-- Apply the archival rule (Step 2) on .opencode/plans/refactor-analysis.md.
 - Use the refactoring-methodology skill.
 - Produce .opencode/plans/refactor-analysis.md following the template at @.opencode/templates/refactor-analysis.md.
 - Do not propose business changes.

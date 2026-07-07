@@ -15,7 +15,8 @@
 
 - Single archive policy (MUST): `.opencode/plans/archive/v-<N>/<YYYYMMDD>T<HHMMSS>-<filename>`.
 - Legacy root archive path is forbidden: `.opencode/plans/archive/<YYYYMMDD>T<HHMMSS>-<filename>`.
-- For archival operations under `.opencode/plans/`, request the archive version from the user exactly once per command execution.
+- The only command allowed to archive `.opencode/plans/*.md` is `/analyse extension-business`.
+- For that command, request the archive version from the user exactly once per execution.
 - Prompt format must be `V-` and the user provides the numeric suffix.
 - Accepted values are integers in range `0..100000`.
 - Archive destination directory is `.opencode/plans/archive/v-<N>/`.
