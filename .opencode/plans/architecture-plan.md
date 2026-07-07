@@ -272,4 +272,4 @@ Execution order follows hexagonal dependency flow: domain -> (adapter-out + appl
 
 ## Archive operations executed
 
-- Moved `.opencode/plans/architecture-plan.md` -> `.opencode/plans/archive/20260630T153000-architecture-plan.md`
+- Moved `.opencode/plans/architecture-plan.md` -> `.opencode/plans/archive/v-1/20260630T153000-architecture-plan.md`

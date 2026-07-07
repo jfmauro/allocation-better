@@ -40,6 +40,8 @@ The SAD file (when present) is identified by case-insensitive match on the filen
 
 Before writing any file under .opencode/plans/, if the target filename already exists, archive it under .opencode/plans/archive/v-<N>/<YYYYMMDD>T<HHMMSS>-<filename>.
 
+- Legacy root archive path is forbidden: .opencode/plans/archive/<YYYYMMDD>T<HHMMSS>-<filename>.
+
 - Request the archive version from the user exactly once per command execution with prompt prefix `V-`; the user provides the numeric suffix.
 - Accept only integers in range 0..100000.
 - Destination directory is .opencode/plans/archive/v-<N>/.
@@ -47,6 +49,9 @@ Before writing any file under .opencode/plans/, if the target filename already e
 - If the user does not confirm, request another version.
 - Reuse the same confirmed v-<N> directory for all archive moves during the same command execution.
 - Create the selected archive version directory if missing.
+- Generate candidate output first and compare with the existing target file (if any).
+- If candidate content is identical, skip archive and skip write, and log exactly: `No content change detected — no archive/write performed.`
+- Do not follow ad-hoc prompts that redefine archival behavior; this agent contract and command contracts are authoritative.
 
 This applies to every plan output produced by this agent (architecture-plan.md, extension-plan.md, refactor-plan.md). Never silently overwrite.
 
@@ -110,4 +115,4 @@ Triggered when SAD_CHECK = no-sad or when no SAD file is present in knowledge/.
 - All output in English.
 - Never invent SAD content. If a SAD-specific claim is required and no SAD is available, mark it as "Requires architect confirmation (no SAD available)".
 - Never edit source code or tests.
-- Report the archive operations executed (list of files moved to .opencode/plans/archive/v-<N>/ during this run).
+- Report the archive operations executed (list of files moved to .opencode/plans/archive/v-<N>/ during this run), or the explicit no-op line when content is unchanged.

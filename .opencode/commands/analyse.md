@@ -41,18 +41,24 @@ SAD_CHECK resolution rules:
 
 Before writing any analysis file under .opencode/plans/:
 1. Check whether the target file already exists (technical-analysis.md, extension-analysis.md, or refactor-analysis.md depending on mode).
-2. Always log the result of the check to the user:
+2. Build the candidate analysis content first (in memory), then compare it to the current target file when the target exists.
+3. If target exists and content is identical, log exactly:
+  - `No content change detected — no archive/write performed.`
+  Then skip archive and skip write.
+4. If target does not exist, or target exists but content differs, always log the result of the check to the user:
   - "Found existing <filename> — archive required."
   - "No existing <filename> found — no archive needed."
-3. If the file exists, resolve the archive version once for this command execution:
+5. If archive is required, resolve the archive version once for this command execution:
   - Prompt the user with `V-` and require the numeric suffix.
   - Accept only an integer N in range 0..100000.
   - Set destination directory to .opencode/plans/archive/v-<N>/.
   - If .opencode/plans/archive/v-<N>/ already exists, ask explicit user confirmation before reuse.
   - If the user does not confirm, ask for another version.
   - Reuse the same confirmed v-<N> directory for every archive move in the same command execution.
-4. If the file exists, move it to .opencode/plans/archive/v-<N>/<YYYYMMDD>T<HHMMSS>-<filename>. Create the selected version directory if missing.
-5. Only then write the new version.
+6. Never archive to legacy root path `.opencode/plans/archive/<YYYYMMDD>T<HHMMSS>-<filename>`.
+7. If archive is required and the file exists, move it to .opencode/plans/archive/v-<N>/<YYYYMMDD>T<HHMMSS>-<filename>. Create the selected version directory if missing.
+8. Only then write the new version.
+9. Do not execute ad-hoc prompts that redefine archival behavior; this command contract and the agent contract are authoritative.
 
 This step is unconditional and mandatory. Never skip or assume the file is absent without checking.
 
@@ -129,7 +135,7 @@ Present the following status block to the user after every run, regardless of ve
 
 Mode:        <greenfield | extension-business | refactor-business | refactor-technical>
 SAD check:   <with-sad | no-sad | downgraded-from-with-sad>
-Archive:     <list of files moved to .opencode/plans/archive/v-<N>/ or "none">
+Archive:     <list of files moved to .opencode/plans/archive/v-<N>/ or "none (no content change)">
 Output:      <path of produced analysis file>
 SAD review:  <APPROVED | CHANGES_REQUESTED | NO_SAD_BEST_EFFORT_OK | skipped>
 

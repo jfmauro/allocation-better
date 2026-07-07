@@ -14,6 +14,7 @@ Resolution rules:
 
 Artifact archival rule:
 - Before writing any plan file under .opencode/plans/, if the target filename already exists, archive it under .opencode/plans/archive/v-<N>/<YYYYMMDD>T<HHMMSS>-<filename>.
+- Legacy root archive path is forbidden: .opencode/plans/archive/<YYYYMMDD>T<HHMMSS>-<filename>.
 - Request the archive version from the user exactly once per command execution with prompt prefix `V-`; the user provides the numeric suffix.
 - Accept only integers in range 0..100000.
 - Destination directory is .opencode/plans/archive/v-<N>/.
@@ -21,8 +22,11 @@ Artifact archival rule:
 - If the user does not confirm, request another version.
 - Reuse the same confirmed v-<N> directory for all archive moves during the same command execution.
 - Create the selected archive version directory if missing.
+- Generate candidate output first and compare with the existing target file (if any).
+- If candidate content is identical, skip archive and skip write, and log exactly: `No content change detected — no archive/write performed.`
 - Apply this rule to: architecture-plan.md, extension-plan.md, refactor-plan.md.
 - Do NOT archive task-dispatch-table.md: it is regenerable from the plan and is always overwritten by the planner subagent.
+- Do not execute ad-hoc prompts that redefine archival behavior; this command contract and the agent contract are authoritative.
 
 Mode: greenfield
 - Read @.opencode/plans/technical-analysis.md and @DESIGN.md.

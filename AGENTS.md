@@ -13,6 +13,8 @@
 
 ## Plans archive versioning
 
+- Single archive policy (MUST): `.opencode/plans/archive/v-<N>/<YYYYMMDD>T<HHMMSS>-<filename>`.
+- Legacy root archive path is forbidden: `.opencode/plans/archive/<YYYYMMDD>T<HHMMSS>-<filename>`.
 - For archival operations under `.opencode/plans/`, request the archive version from the user exactly once per command execution.
 - Prompt format must be `V-` and the user provides the numeric suffix.
 - Accepted values are integers in range `0..100000`.
@@ -21,6 +23,9 @@
 - If the user does not confirm, request another version.
 - Reuse the same confirmed `v-<N>` directory for every archive move performed by that command execution.
 - Keep the timestamped filename format: `.opencode/plans/archive/v-<N>/<YYYYMMDD>T<HHMMSS>-<filename>`.
+- If generated content is identical to the existing target file, skip archive and skip write.
+- Required no-op log line: `No content change detected — no archive/write performed.`
+- Do not run ad-hoc prompts that redefine archival behavior; `.opencode/commands/*.md` and agent contracts are authoritative.
 
 ## Planning mode
 

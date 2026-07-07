@@ -13,6 +13,7 @@ Resolution rules:
 
 Artifact archival rule:
 - Before writing .opencode/plans/release-report.md, if the file already exists, archive it under .opencode/plans/archive/v-<N>/<YYYYMMDD>T<HHMMSS>-release-report.md.
+- Legacy root archive path is forbidden: .opencode/plans/archive/<YYYYMMDD>T<HHMMSS>-release-report.md.
 - Request the archive version from the user exactly once per command execution with prompt prefix `V-`; the user provides the numeric suffix.
 - Accept only integers in range 0..100000.
 - Destination directory is .opencode/plans/archive/v-<N>/.
@@ -20,6 +21,9 @@ Artifact archival rule:
 - If the user does not confirm, request another version.
 - Reuse the same confirmed v-<N> directory for all archive moves during the same command execution.
 - Create the selected archive version directory if missing.
+- Generate candidate output first and compare with the existing target file (if any).
+- If candidate content is identical, skip archive and skip write, and log exactly: `No content change detected — no archive/write performed.`
+- Do not execute ad-hoc prompts that redefine archival behavior; this command contract and the agent contract are authoritative.
 
 Step 1 - Run full test suite:
 !`mvn -q verify`
