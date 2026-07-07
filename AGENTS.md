@@ -11,6 +11,17 @@
 - Agents and commands MUST reference `knowledge/**` rather than hardcoded filenames or page IDs.
 - `knowledge/README.md` lists the inputs and any precedence rules when they overlap.
 
+## Plans archive versioning
+
+- For archival operations under `.opencode/plans/`, request the archive version from the user exactly once per command execution.
+- Prompt format must be `V-` and the user provides the numeric suffix.
+- Accepted values are integers in range `0..100000`.
+- Archive destination directory is `.opencode/plans/archive/v-<N>/`.
+- If `.opencode/plans/archive/v-<N>/` already exists, ask explicit user confirmation before reusing it.
+- If the user does not confirm, request another version.
+- Reuse the same confirmed `v-<N>` directory for every archive move performed by that command execution.
+- Keep the timestamped filename format: `.opencode/plans/archive/v-<N>/<YYYYMMDD>T<HHMMSS>-<filename>`.
+
 ## Planning mode
 
 - Always ask clarifying questions before producing a plan.

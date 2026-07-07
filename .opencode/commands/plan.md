@@ -13,7 +13,14 @@ Resolution rules:
 - If SAD_CHECK is with-sad but no SAD file is present under knowledge/, downgrade to no-sad and warn the user explicitly.
 
 Artifact archival rule:
-- Before writing any plan file under .opencode/plans/, if the target filename already exists, move the existing file to .opencode/plans/archive/<YYYYMMDD>T<HHMMSS>-<filename>. Create the archive directory if missing.
+- Before writing any plan file under .opencode/plans/, if the target filename already exists, archive it under .opencode/plans/archive/v-<N>/<YYYYMMDD>T<HHMMSS>-<filename>.
+- Request the archive version from the user exactly once per command execution with prompt prefix `V-`; the user provides the numeric suffix.
+- Accept only integers in range 0..100000.
+- Destination directory is .opencode/plans/archive/v-<N>/.
+- If the selected .opencode/plans/archive/v-<N>/ already exists, ask explicit user confirmation before reuse.
+- If the user does not confirm, request another version.
+- Reuse the same confirmed v-<N> directory for all archive moves during the same command execution.
+- Create the selected archive version directory if missing.
 - Apply this rule to: architecture-plan.md, extension-plan.md, refactor-plan.md.
 - Do NOT archive task-dispatch-table.md: it is regenerable from the plan and is always overwritten by the planner subagent.
 

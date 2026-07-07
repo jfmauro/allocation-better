@@ -41,7 +41,15 @@ For every mode, the analyst clearly separates baseline content (do not re-implem
 
 ## Artifact archival rule
 
-Before writing any file under .opencode/plans/, if the target filename already exists, move the existing file to .opencode/plans/archive/<YYYYMMDD>T<HHMMSS>-<filename>. Create the archive directory if missing.
+Before writing any file under .opencode/plans/, if the target filename already exists, archive it under .opencode/plans/archive/v-<N>/<YYYYMMDD>T<HHMMSS>-<filename>.
+
+- Request the archive version from the user exactly once per command execution with prompt prefix `V-`; the user provides the numeric suffix.
+- Accept only integers in range 0..100000.
+- Destination directory is .opencode/plans/archive/v-<N>/.
+- If the selected .opencode/plans/archive/v-<N>/ already exists, ask explicit user confirmation before reuse.
+- If the user does not confirm, request another version.
+- Reuse the same confirmed v-<N> directory for all archive moves during the same command execution.
+- Create the selected archive version directory if missing.
 
 This applies to every analysis output produced by this agent (technical-analysis.md, extension-analysis.md, refactor-analysis.md). Never silently overwrite.
 
@@ -135,4 +143,4 @@ Triggered when SAD_CHECK = no-sad or when no file containing "sad" (case-insensi
 - Cite source files inline. Use knowledge/baseline/* and knowledge/inbox/* paths explicitly so the reader can verify what is historical context and what is new scope.
 - Never invent business rules, NFRs, or architecture decisions.
 - After saving, summarize the open questions back to the user and indicate whether a mode switch is recommended.
-- Report the archive operations executed (list of files moved to .opencode/plans/archive/ during this run).
+- Report the archive operations executed (list of files moved to .opencode/plans/archive/v-<N>/ during this run).

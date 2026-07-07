@@ -38,7 +38,15 @@ The SAD file (when present) is identified by case-insensitive match on the filen
 
 ## Artifact archival rule
 
-Before writing any file under .opencode/plans/, if the target filename already exists, move the existing file to .opencode/plans/archive/<YYYYMMDD>T<HHMMSS>-<filename>. Create the archive directory if missing.
+Before writing any file under .opencode/plans/, if the target filename already exists, archive it under .opencode/plans/archive/v-<N>/<YYYYMMDD>T<HHMMSS>-<filename>.
+
+- Request the archive version from the user exactly once per command execution with prompt prefix `V-`; the user provides the numeric suffix.
+- Accept only integers in range 0..100000.
+- Destination directory is .opencode/plans/archive/v-<N>/.
+- If the selected .opencode/plans/archive/v-<N>/ already exists, ask explicit user confirmation before reuse.
+- If the user does not confirm, request another version.
+- Reuse the same confirmed v-<N> directory for all archive moves during the same command execution.
+- Create the selected archive version directory if missing.
 
 This applies to every plan output produced by this agent (architecture-plan.md, extension-plan.md, refactor-plan.md). Never silently overwrite.
 
@@ -102,4 +110,4 @@ Triggered when SAD_CHECK = no-sad or when no SAD file is present in knowledge/.
 - All output in English.
 - Never invent SAD content. If a SAD-specific claim is required and no SAD is available, mark it as "Requires architect confirmation (no SAD available)".
 - Never edit source code or tests.
-- Report the archive operations executed (list of files moved to .opencode/plans/archive/ during this run).
+- Report the archive operations executed (list of files moved to .opencode/plans/archive/v-<N>/ during this run).
