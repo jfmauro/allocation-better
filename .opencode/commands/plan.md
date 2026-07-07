@@ -7,10 +7,23 @@ Parameters:
 - $1 = MODE (optional). Allowed values: greenfield | extension-business | refactor-business | refactor-technical. Default: greenfield.
 - $2 = SAD_CHECK (optional). Allowed values: with-sad | no-sad. Default: with-sad.
 
+## Step 0 — Confluence SAD pre-resolution (ALWAYS execute first, before any other step)
+
+Before reading plan inputs or deciding whether to downgrade SAD_CHECK, resolve all Confluence page IDs listed in `knowledge/baseline/` and `knowledge/inbox/`:
+
+1. Find every `confluence-list-page-id.md` under `knowledge/baseline/` and `knowledge/inbox/`.
+2. Read every page ID listed in each file.
+3. Fetch the content of each page via the Confluence MCP tool or the REST endpoint:
+   `GET <CONFLUENCE_BASE_URL>/rest/api/content/<page-id>?expand=body.storage`
+4. Convert fetched content to Markdown and treat it as an in-memory file named `confluence-<page-id>.md` in the same subdirectory as the source `confluence-list-page-id.md`.
+5. A fetched page whose title or content contains `SAD`, `Solution Architecture`, or `Architecture Document` (case-insensitive) is treated as a SAD file for this command.
+6. If a fetch fails while `SAD_CHECK = with-sad`, abort immediately and report the failed page ID to the user. Do not continue.
+7. Log to the user which IDs were fetched, which subdirectory they came from (`baseline` or `inbox`), and whether any fetched page was identified as a SAD.
+
 Resolution rules:
 - If $1 is empty, treat MODE as greenfield.
 - If $2 is empty, treat SAD_CHECK as with-sad.
-- If SAD_CHECK is with-sad but no SAD file is present under knowledge/, downgrade to no-sad and warn the user explicitly.
+- If SAD_CHECK is with-sad but no SAD file is present under knowledge/ and no fetched Confluence page was identified as a SAD, downgrade to no-sad and warn the user explicitly.
 
 Artifact archival rule:
 - Before writing any plan file under .opencode/plans/, if the target filename already exists, archive it under .opencode/plans/archive/v-<N>/<YYYYMMDD>T<HHMMSS>-<filename>.
@@ -84,3 +97,7 @@ If SAD_CHECK = no-sad:
 - Operate in no-sad best-effort mode (apply generic hexagonal and SOLID standards instead of a SAD).
 - Write a clear warning at the top of the produced plan: "WARNING: produced without SAD validation."
 - Recommend producing a SAD when budget allows.
+
+If SAD_CHECK = with-sad:
+- Use the fetched Confluence SAD content in-memory when available.
+- Do not persist fetched SAD content under `knowledge/`.
