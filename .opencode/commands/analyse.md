@@ -37,26 +37,28 @@ SAD_CHECK resolution rules:
 - If SAD_CHECK = with-sad AND a SAD is present, proceed with with-sad.
 - Files placed at the root of knowledge/ (outside both subdirectories) are treated as baseline by default with a backward-compatibility warning.
 
-## Step 2 — Artifact archival (execute before writing any output file)
+## Step 2 — Archive selection (optional, explicit)
 
-Before writing any analysis file under .opencode/plans/:
-1. This step applies only when `MODE = extension-business`.
-2. For that mode, request the archive version once at the start using `V-<n>` and require an integer `0..100000`.
-3. Resolve the destination directory as `.opencode/plans/archive/v-<n>/` and reuse it for every archive move in this execution.
-4. Determine the root `.opencode/plans/*.md` file(s) relevant to the current extension cycle and check whether each target already exists.
-5. Build the candidate content first (in memory), then compare it to the current target file when the target exists.
-6. If a target exists and content is identical, log exactly:
-- `No content change detected — no archive/write performed.`
-   Then skip archive and skip write.
-7. If a target does not exist, or a target exists but content differs, always log the result of the check to the user:
-  - "Found existing <filename> — archive required."
-  - "No existing <filename> found — no archive needed."
-8. Never archive to legacy root path `.opencode/plans/archive/<YYYYMMDD>T<HHMMSS>-<filename>`.
-9. If archive is required and the file exists, move it to `.opencode/plans/archive/v-<n>/<YYYYMMDD>T<HHMMSS>-<filename>`. Create the selected version directory if missing.
-10. Only then write the new version.
-11. Do not execute ad-hoc prompts that redefine archival behavior; this command contract and the agent contract are authoritative.
+Before writing any output file under `.opencode/plans/`, ask the user whether they want to archive the current plan set.
 
-This step is mandatory when `MODE = extension-business`. For other modes, `.opencode/plans/*.md` is not archived.
+If the user answers no:
+- do not archive anything
+- continue the analysis normally
+
+If the user answers yes:
+1. Inspect `.opencode/plans/archive/` and list existing `v-*` directories.
+2. Compute the highest existing version `V-max`.
+3. Suggest `V-(max+1)` as the recommended version.
+4. Ask the user to confirm the suggested version or provide another `V-<n>`.
+5. If the chosen `v-<n>` already exists, ask explicit confirmation before reusing it.
+6. Archive the current root `.opencode/plans/*.md` files into `.opencode/plans/archive/v-<n>/<YYYYMMDD>T<HHMMSS>-<filename>`.
+7. If the target content is identical to the current file, skip archive/write for that file and log:
+   `No content change detected — no archive/write performed.`
+
+Rules:
+- Archiving is only available from `/analyse`.
+- No other command mentions or performs archive handling.
+- The archive directory is preserved as historical storage.
 
 ## Step 3 — Analysis production
 
@@ -78,7 +80,7 @@ Mode: extension-business
 - Read .opencode/plans/technical-analysis.md if present, as the historical baseline.
 - Read .opencode/plans/architecture-plan.md if present, as the architectural baseline.
 - Read the existing codebase (read-only) to identify integration points and preserved contracts.
-- Apply the archival rule (Step 2) on root `.opencode/plans/*.md` files relevant to the extension cycle.
+- Apply the archive-selection flow (Step 2) on root `.opencode/plans/*.md` files relevant to the extension cycle when the user requested archiving.
 - Use the technical-analyst-builder skill in extension mode.
 - Produce .opencode/plans/extension-analysis.md following the template at @.opencode/templates/extension-analysis.md.
 - Do not overwrite .opencode/plans/technical-analysis.md.

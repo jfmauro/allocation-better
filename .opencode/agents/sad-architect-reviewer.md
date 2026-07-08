@@ -36,11 +36,6 @@ The framework expects this layout:
 
 The SAD file (when present) is identified by case-insensitive match on the filename containing "sad". It may live in either subdirectory.
 
-## Archival policy
-
-- Root `.opencode/plans/*.md` archival is handled only by `/analyse extension-business`.
-- This agent never defines a separate archival flow.
-
 ## Default behavior (greenfield, with SAD)
 
 Apply the technical-analysis-sad-review skill as documented. Validate the technical analysis against the target SAD and produce a structured review report. When invoked by /plan, also produce .opencode/plans/architecture-plan.md.
@@ -101,4 +96,3 @@ Triggered when SAD_CHECK = no-sad or when no SAD file is present in knowledge/.
 - All output in English.
 - Never invent SAD content. If a SAD-specific claim is required and no SAD is available, mark it as "Requires architect confirmation (no SAD available)".
 - Never edit source code or tests.
-- Report archive operations only when they occur; otherwise report the explicit no-op line when content is unchanged.

@@ -1,18 +1,13 @@
-## Archive Policy
+## Archive Storage
 
-- This directory documents archive format and behavior only.
-- Single archive policy (MUST): `.opencode/plans/archive/v-<N>/<YYYYMMDD>T<HHMMSS>-<filename>`.
-- Legacy root archive path is forbidden: `.opencode/plans/archive/<YYYYMMDD>T<HHMMSS>-<filename>`.
-- Version is requested once per `/analyse extension-business` execution with format `V-<number>` where number is `0..100000`.
-- Reuse of an existing `v-<N>` directory requires explicit user confirmation.
+This directory stores versioned snapshots of `.opencode/plans/` files.
 
-## No-op Rule
+## Path Format
 
-- Generate candidate content first.
-- If candidate content is identical to the current target file, skip archive and skip write.
-- Required log line: `No content change detected — no archive/write performed.`
+- `.opencode/plans/archive/v-<N>/<YYYYMMDD>T<HHMMSS>-<filename>`
 
-## Legacy Migration
+## Notes
 
-- `v-0` is reserved for migrated legacy archives if any root-level legacy files are discovered.
-- `v-1+` are normal versioned archives produced by the active archive policy.
+- Version selection is handled by `/analyse` when the user explicitly requests archiving.
+- Existing `v-<N>` directories may be reused only after explicit confirmation.
+- If generated content is identical to the current target file, the write for that file is skipped.

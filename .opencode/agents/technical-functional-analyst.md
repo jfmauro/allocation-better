@@ -39,11 +39,6 @@ The framework expects this layout:
 
 For every mode, the analyst clearly separates baseline content (do not re-implement) from inbox content (the actual new scope).
 
-## Archival policy
-
-- Root `.opencode/plans/*.md` archival is handled only by `/analyse extension-business`.
-- This agent follows that command contract and does not define its own archival behavior.
-
 ## Default behavior (greenfield, with SAD)
 
 Apply the technical-analyst-builder skill as documented. Inputs: knowledge/baseline/ + knowledge/inbox/ + root-level files. Produce .opencode/plans/technical-analysis.md. Cite source files inline. Summarize open questions.
@@ -134,4 +129,3 @@ Triggered when SAD_CHECK = no-sad or when no file containing "sad" (case-insensi
 - Cite source files inline. Use knowledge/baseline/* and knowledge/inbox/* paths explicitly so the reader can verify what is historical context and what is new scope.
 - Never invent business rules, NFRs, or architecture decisions.
 - After saving, summarize the open questions back to the user and indicate whether a mode switch is recommended.
-- Report archive operations only when they occur; otherwise report the explicit no-op line when content is unchanged.

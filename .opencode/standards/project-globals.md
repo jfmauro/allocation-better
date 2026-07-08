@@ -23,10 +23,3 @@ opencode.json. It complements AGENTS.md and must not duplicate its content.
 - Only the orchestrator invokes mvn for all other layers, exactly once per
   layer, per AGENTS.md and .opencode/commands/build.md.
 
-## Plans archival policy
-
-- `.opencode/plans/*.md` at the repository root is archived only by
-  `/analyse extension-business`.
-- The archive version must always be requested as `V-<n>` at the start of that
-  command.
-- Archived files use `.opencode/plans/archive/v-<n>/<YYYYMMDD>T<HHMMSS>-<filename>`.

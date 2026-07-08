@@ -11,9 +11,6 @@ Resolution rules:
 - If $2 is empty, treat SAD_CHECK as with-sad.
 - If SAD_CHECK is with-sad but no SAD file is present under knowledge/, downgrade to no-sad and warn the user explicitly.
 
-Artifact archival rule:
-- `/release` does not perform `.opencode/plans` archival; it is upstream only.
-
 Step 1 - Run full test suite:
 !`mvn -q verify`
 
@@ -45,7 +42,7 @@ In refactor mode, spec-reviewer additionally verifies:
 - the non-regression contract is preserved;
 - every public API listed as preserved is still present and behaves identically.
 
-Step 4 - Generate release-report.md only; archival is upstream only.
+Step 4 - Generate release-report.md only.
 
 Step 5 - Assemble the new release report at .opencode/plans/release-report.md:
 - Mode.
@@ -58,7 +55,6 @@ Step 5 - Assemble the new release report at .opencode/plans/release-report.md:
 - For refactor: non-regression status + preserved contract checklist.
 - Open issues.
 - Recommended next steps.
-- Archive index: list of files archived under `docs/archive/` during this run (for traceability).
 
 Step 6 - Present the report to the user for explicit release approval.
 
