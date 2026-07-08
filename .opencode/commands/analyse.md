@@ -48,18 +48,14 @@ If `ARCHIVE = none`:
 - continue the analysis normally
 
 If `ARCHIVE = prompt` (default):
-1. Ask the user whether to archive this run (`yes` / `no`).
-2. If `no`, continue analysis normally.
-3. If `yes`:
-   - Archive every root `.opencode/plans/*.md` file currently present in `.opencode/plans/`.
-   - Inspect `.opencode/plans/archive/` and list existing `v-*` directories.
-   - Compute the highest existing version `v-max`.
-   - Suggest `v-(max+1)` as the recommended version.
-   - Ask the user to confirm the suggested version or provide another `v-<n>`.
-   - If the chosen `v-<n>` already exists, ask explicit confirmation before reusing it.
-   - Archive the current root `.opencode/plans/*.md` files into `.opencode/plans/archive/v-<n>/<YYYYMMDD>T<HHMMSS>-<filename>`.
-   - If the target content is identical to the current file, skip archive/write for that file and log exactly:
-     `No content change detected — no archive/write performed.`
+1. Ask the user for the archive version to use (`v-<n>`).
+2. Inspect `.opencode/plans/archive/` and list existing `v-*` directories.
+3. Compute the highest existing version `v-max`.
+4. Suggest `v-(max+1)` as the recommended version.
+5. If the chosen `v-<n>` already exists, ask explicit confirmation before reusing it.
+6. Archive every root `.opencode/plans/*.md` file currently present in `.opencode/plans/` into `.opencode/plans/archive/v-<n>/<YYYYMMDD>T<HHMMSS>-<filename>`.
+7. If the target content is identical to the current file, skip archive/write for that file and log exactly:
+   `No content change detected — no archive/write performed.`
 
 Rules:
 - Archiving is only available from `/analyse`.
@@ -86,7 +82,7 @@ Mode: extension-business
 - Read .opencode/plans/technical-analysis.md if present, as the historical baseline.
 - Read .opencode/plans/architecture-plan.md if present, as the architectural baseline.
 - Read the existing codebase (read-only) to identify integration points and preserved contracts.
-- Apply the archive-control flow (Step 2) on root `.opencode/plans/*.md` files relevant to the extension cycle when the user requested archiving.
+- Apply the archive-control flow (Step 2) on every root `.opencode/plans/*.md` file when archiving is enabled.
 - Use the technical-analyst-builder skill in extension mode.
 - Produce .opencode/plans/extension-analysis.md following the template at @.opencode/templates/extension-analysis.md.
 - Do not overwrite .opencode/plans/technical-analysis.md.
@@ -136,7 +132,7 @@ Present the following status block to the user after every run, regardless of ve
 
 Mode:        <greenfield | extension-business | refactor-business | refactor-technical>
 SAD check:   <with-sad | no-sad | downgraded-from-with-sad>
-Archive:     <list of files moved to .opencode/plans/archive/v-<N>/ or "skipped (archive=none or user=no)" or "none (no content change)">
+Archive:     <list of files moved to .opencode/plans/archive/v-<N>/ or "skipped (archive=none)" or "none (no content change)">
 Output:      <path of produced analysis file>
 SAD review:  <APPROVED | CHANGES_REQUESTED | NO_SAD_BEST_EFFORT_OK | skipped>
 
