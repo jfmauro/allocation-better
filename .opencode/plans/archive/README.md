@@ -8,6 +8,8 @@ This directory stores versioned snapshots of `.opencode/plans/` files.
 
 ## Notes
 
-- Version selection is handled by `/analyse` when the user explicitly requests archiving.
+- Version selection is handled by `/analyse` via `$3 = ARCHIVE`.
+- If `ARCHIVE = prompt`, the user decides whether to archive this run.
+- If a `v-<N>` directory already exists, suggest `V-(max+1)` as the recommended version.
 - Existing `v-<N>` directories may be reused only after explicit confirmation.
 - If generated content is identical to the current target file, the write for that file is skipped.

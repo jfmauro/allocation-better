@@ -30,6 +30,7 @@ This step is unconditional. It runs in every mode, including greenfield.
 SAD_CHECK resolution rules:
 - If $1 is empty, treat MODE as greenfield.
 - If $2 is empty, treat SAD_CHECK as with-sad.
+- If $3 is empty, treat ARCHIVE as prompt.
 - A SAD is considered present if ANY of the following is true:
   a. A file whose name contains "sad" (case-insensitive) exists under knowledge/baseline/ or knowledge/inbox/.
   b. A fetched Confluence page (from Step 0) was identified as a SAD.
@@ -134,7 +135,7 @@ Present the following status block to the user after every run, regardless of ve
 
 Mode:        <greenfield | extension-business | refactor-business | refactor-technical>
 SAD check:   <with-sad | no-sad | downgraded-from-with-sad>
-Archive:     <list of files moved to .opencode/plans/archive/v-<N>/ or "none (no content change)">
+Archive:     <list of files moved to .opencode/plans/archive/v-<N>/ or "skipped (archive=none or user=no)" or "none (no content change)">
 Output:      <path of produced analysis file>
 SAD review:  <APPROVED | CHANGES_REQUESTED | NO_SAD_BEST_EFFORT_OK | skipped>
 

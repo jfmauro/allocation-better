@@ -107,7 +107,7 @@ The framework supports four modes built on top of the same five-command pipeline
 
 | Command | `$1` | `$2` | `$3` |
 |---|---|---|---|
-| `/analyse` | mode | sad-check | — |
+| `/analyse` | mode | sad-check | archive |
 | `/plan` | mode | sad-check | — |
 | `/build` | layer | mode (greenfield / extension / refactor) | review-cadence (layer / step) |
 | `/document` | mode (greenfield / extension / refactor) | — | — |
