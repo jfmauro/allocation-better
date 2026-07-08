@@ -51,6 +51,7 @@ If `ARCHIVE = prompt` (default):
 1. Ask the user whether to archive this run (`yes` / `no`).
 2. If `no`, continue analysis normally.
 3. If `yes`:
+   - Archive every root `.opencode/plans/*.md` file currently present in `.opencode/plans/`.
    - Inspect `.opencode/plans/archive/` and list existing `v-*` directories.
    - Compute the highest existing version `v-max`.
    - Suggest `v-(max+1)` as the recommended version.
