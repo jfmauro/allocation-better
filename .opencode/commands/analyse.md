@@ -52,9 +52,9 @@ If `ARCHIVE = prompt` (default):
 2. If `no`, continue analysis normally.
 3. If `yes`:
    - Inspect `.opencode/plans/archive/` and list existing `v-*` directories.
-   - Compute the highest existing version `V-max`.
-   - Suggest `V-(max+1)` as the recommended version.
-   - Ask the user to confirm the suggested version or provide another `V-<n>`.
+   - Compute the highest existing version `v-max`.
+   - Suggest `v-(max+1)` as the recommended version.
+   - Ask the user to confirm the suggested version or provide another `v-<n>`.
    - If the chosen `v-<n>` already exists, ask explicit confirmation before reusing it.
    - Archive the current root `.opencode/plans/*.md` files into `.opencode/plans/archive/v-<n>/<YYYYMMDD>T<HHMMSS>-<filename>`.
    - If the target content is identical to the current file, skip archive/write for that file and log exactly:
