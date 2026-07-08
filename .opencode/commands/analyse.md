@@ -6,6 +6,7 @@ subtask: true
 Parameters:
 - $1 = MODE (optional). Allowed values: greenfield | extension-business | refactor-business | refactor-technical. Default: greenfield.
 - $2 = SAD_CHECK (optional). Allowed values: with-sad | no-sad. Default: with-sad.
+- $3 = ARCHIVE (optional). Allowed values: none | prompt. Default: prompt.
 
 ## Step 0 — Confluence pre-resolution (ALWAYS execute first, before any other step)
 
@@ -15,7 +16,7 @@ Before reading knowledge/ content or detecting the SAD, resolve all Confluence p
 2. For each such file found, read every page ID it contains.
 3. Fetch the content of each page via the Confluence MCP tool or the REST endpoint:
    GET <CONFLUENCE_BASE_URL>/rest/api/content/<page-id>?expand=body.storage
-4. Convert fetched content to Markdown and treat it as an in-memory file named
+4. Convert fetched content to Markdown and treat an in-memory file named
    confluence-<page-id>.md, located in the same subdirectory as the source confluence-list-page-id.md.
 5. A fetched page whose title or content contains "SAD", "Solution Architecture", or "Architecture Document"
    (case-insensitive) is treated as a SAD file for all subsequent SAD detection rules.
@@ -37,23 +38,26 @@ SAD_CHECK resolution rules:
 - If SAD_CHECK = with-sad AND a SAD is present, proceed with with-sad.
 - Files placed at the root of knowledge/ (outside both subdirectories) are treated as baseline by default with a backward-compatibility warning.
 
-## Step 2 — Archive selection (optional, explicit)
+## Step 2 — Archive control (parameter-driven)
 
-Before writing any output file under `.opencode/plans/`, ask the user whether they want to archive the current plan set.
+Archive behavior is controlled by `$3 = ARCHIVE`.
 
-If the user answers no:
+If `ARCHIVE = none`:
 - do not archive anything
 - continue the analysis normally
 
-If the user answers yes:
-1. Inspect `.opencode/plans/archive/` and list existing `v-*` directories.
-2. Compute the highest existing version `V-max`.
-3. Suggest `V-(max+1)` as the recommended version.
-4. Ask the user to confirm the suggested version or provide another `V-<n>`.
-5. If the chosen `v-<n>` already exists, ask explicit confirmation before reusing it.
-6. Archive the current root `.opencode/plans/*.md` files into `.opencode/plans/archive/v-<n>/<YYYYMMDD>T<HHMMSS>-<filename>`.
-7. If the target content is identical to the current file, skip archive/write for that file and log:
-   `No content change detected — no archive/write performed.`
+If `ARCHIVE = prompt` (default):
+1. Ask the user whether to archive this run (`yes` / `no`).
+2. If `no`, continue analysis normally.
+3. If `yes`:
+   - Inspect `.opencode/plans/archive/` and list existing `v-*` directories.
+   - Compute the highest existing version `V-max`.
+   - Suggest `V-(max+1)` as the recommended version.
+   - Ask the user to confirm the suggested version or provide another `V-<n>`.
+   - If the chosen `v-<n>` already exists, ask explicit confirmation before reusing it.
+   - Archive the current root `.opencode/plans/*.md` files into `.opencode/plans/archive/v-<n>/<YYYYMMDD>T<HHMMSS>-<filename>`.
+   - If the target content is identical to the current file, skip archive/write for that file and log exactly:
+     `No content change detected — no archive/write performed.`
 
 Rules:
 - Archiving is only available from `/analyse`.
@@ -80,7 +84,7 @@ Mode: extension-business
 - Read .opencode/plans/technical-analysis.md if present, as the historical baseline.
 - Read .opencode/plans/architecture-plan.md if present, as the architectural baseline.
 - Read the existing codebase (read-only) to identify integration points and preserved contracts.
-- Apply the archive-selection flow (Step 2) on root `.opencode/plans/*.md` files relevant to the extension cycle when the user requested archiving.
+- Apply the archive-control flow (Step 2) on root `.opencode/plans/*.md` files relevant to the extension cycle when the user requested archiving.
 - Use the technical-analyst-builder skill in extension mode.
 - Produce .opencode/plans/extension-analysis.md following the template at @.opencode/templates/extension-analysis.md.
 - Do not overwrite .opencode/plans/technical-analysis.md.
