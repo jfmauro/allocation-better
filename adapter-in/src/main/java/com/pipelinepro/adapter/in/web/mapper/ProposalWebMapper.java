@@ -15,6 +15,8 @@ import com.pipelinepro.adapter.in.web.v1.dto.response.ProposalCandidateDebtorRes
 import com.pipelinepro.adapter.in.web.v1.dto.response.ProposalStateResponse;
 import com.pipelinepro.domain.AllocationProposal;
 import com.pipelinepro.domain.AllocationProposalCandidate;
+import com.pipelinepro.domain.AllocationProposalCandidateDetails;
+import com.pipelinepro.domain.AllocationProposalDetails;
 import com.pipelinepro.domain.Debt;
 import com.pipelinepro.domain.Debtor;
 import com.pipelinepro.domain.PaymentAllocation;
@@ -102,6 +104,13 @@ public interface ProposalWebMapper {
         return toAllocationProposalResponseWithCandidateResponses(proposal, candidateResponses);
     }
 
+    default AllocationProposalResponse toAllocationProposalResponse(AllocationProposalDetails details) {
+        List<AllocationProposalCandidateResponse> candidateResponses = details == null || details.candidates() == null
+                ? List.of()
+                : details.candidates().stream().map(this::toAllocationProposalCandidateResponse).toList();
+        return toAllocationProposalResponseWithCandidateResponses(details.proposal(), candidateResponses);
+    }
+
     default AllocationProposalResponse toAllocationProposalResponseWithCandidateResponses(
             AllocationProposal proposal,
             List<AllocationProposalCandidateResponse> candidates) {
@@ -130,6 +139,19 @@ public interface ProposalWebMapper {
     @Mapping(target = "debt", ignore = true)
     @Mapping(target = "debtor", ignore = true)
     AllocationProposalCandidateResponse toAllocationProposalCandidateResponse(AllocationProposalCandidate candidate);
+
+    default AllocationProposalCandidateResponse toAllocationProposalCandidateResponse(AllocationProposalCandidateDetails details) {
+        AllocationProposalCandidateResponse base = toAllocationProposalCandidateResponse(details.candidate());
+        return new AllocationProposalCandidateResponse(
+                base.id(),
+                base.debtorId(),
+                base.debtId(),
+                base.confidence(),
+                base.suggestedAmount(),
+                base.rankOrder(),
+                details.debt() == null ? null : toProposalCandidateDebtResponse(details.debt()),
+                details.debtor() == null ? null : toProposalCandidateDebtorResponse(details.debtor()));
+    }
 
     @Mapping(target = "id", expression = "java(debt.id())")
     @Mapping(target = "debtorId", expression = "java(debt.debtorId())")

@@ -6,11 +6,9 @@ import com.pipelinepro.adapter.in.web.mapper.DebtWebMapper;
 import com.pipelinepro.adapter.in.web.mapper.PaymentWebMapper;
 import com.pipelinepro.adapter.in.web.mapper.ProposalWebMapper;
 import com.pipelinepro.domain.port.in.CreateDebtIntakeUseCase;
-import com.pipelinepro.domain.port.in.GetProposalCandidatesUseCase;
-import com.pipelinepro.domain.port.in.GetProposalDetailUseCase;
+import com.pipelinepro.domain.port.in.GetAllocationProposalDetailsUseCase;
 import com.pipelinepro.domain.port.in.ProposalLifecycleUseCase;
 import com.pipelinepro.domain.port.in.QueryDebtUseCase;
-import com.pipelinepro.domain.port.in.QueryDebtorUseCase;
 import com.pipelinepro.domain.port.in.QueryPaymentUseCase;
 import com.pipelinepro.domain.port.in.ReceivePaymentUseCase;
 import org.junit.jupiter.api.Test;
@@ -46,25 +44,19 @@ class AdapterInSecurityTest {
     private PaymentWebMapper paymentWebMapper;
 
     @MockitoBean
-    private ProposalWebMapper proposalWebMapper;
-
-    @MockitoBean
     private ProposalLifecycleUseCase proposalLifecycleUseCase;
 
     @MockitoBean
-    private GetProposalDetailUseCase getProposalDetailUseCase;
-
-    @MockitoBean
-    private GetProposalCandidatesUseCase getProposalCandidatesUseCase;
-
-    @MockitoBean
-    private QueryDebtUseCase queryDebtUseCase;
-
-    @MockitoBean
-    private QueryDebtorUseCase queryDebtorUseCase;
+    private ProposalWebMapper proposalWebMapper;
 
     @MockitoBean
     private CreateDebtIntakeUseCase createDebtIntakeUseCase;
+
+    @MockitoBean
+    private GetAllocationProposalDetailsUseCase getAllocationProposalDetailsUseCase;
+
+    @MockitoBean
+    private QueryDebtUseCase queryDebtUseCase;
 
     @MockitoBean
     private DebtWebMapper debtWebMapper;
@@ -78,10 +70,11 @@ class AdapterInSecurityTest {
                 .andExpect(status().isNotFound());
     }
 
+
     @Test
     void getProposal_shouldRemainPublic_whenUnauthenticated() throws Exception {
         UUID proposalId = UUID.randomUUID();
-        when(getProposalDetailUseCase.getProposal(proposalId)).thenReturn(Optional.empty());
+        when(getAllocationProposalDetailsUseCase.getProposalDetails(proposalId)).thenReturn(Optional.empty());
 
         mockMvc.perform(get("/allocation-proposals/{proposalId}", proposalId))
                 .andExpect(status().isNotFound());

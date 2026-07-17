@@ -1,6 +1,7 @@
 package com.pipelinepro.bootstrap;
 
 import com.pipelinepro.PipelineProApplication;
+import com.pipelinepro.bootstrap.config.IntakeSecurityConfig;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -31,7 +32,7 @@ class IntakeSecurityMappingContextTest {
     void should_returnForbidden_when_postDebtorsWithoutCreateDebtorPermission() throws Exception {
         mockMvc.perform(post("/debtors")
                         .with(csrf())
-                        .with(user("tester").authorities(() -> "VIEW_DEBTOR_MASTER_DATA"))
+                        .with(user("tester").authorities(() -> IntakeSecurityConfig.VIEW_DEBTOR_MASTER_DATA))
                         .header("Idempotency-Key", "idem-sec-1")
                         .header("X-Correlation-Id", "corr-sec-1")
                         .contentType("application/json")
@@ -42,7 +43,7 @@ class IntakeSecurityMappingContextTest {
     @Test
     void should_returnForbidden_when_getDebtorsWithoutViewDebtorMasterDataPermission() throws Exception {
         mockMvc.perform(get("/debtors")
-                        .with(user("tester").authorities(() -> "CREATE_DEBTOR")))
+                        .with(user("tester").authorities(() -> IntakeSecurityConfig.CREATE_DEBTOR)))
                 .andExpect(status().isForbidden());
     }
 
@@ -51,7 +52,7 @@ class IntakeSecurityMappingContextTest {
         UUID debtorId = UUID.randomUUID();
         mockMvc.perform(post("/debts")
                         .with(csrf())
-                        .with(user("tester").authorities(() -> "VIEW_DEBT_MASTER_DATA"))
+                        .with(user("tester").authorities(() -> IntakeSecurityConfig.VIEW_DEBT_MASTER_DATA))
                         .header("Idempotency-Key", "idem-sec-2")
                         .header("X-Correlation-Id", "corr-sec-2")
                         .contentType("application/json")
@@ -62,15 +63,35 @@ class IntakeSecurityMappingContextTest {
     @Test
     void should_returnForbidden_when_getDebtWithoutViewDebtMasterDataPermission() throws Exception {
         mockMvc.perform(get("/debts/{debtId}", UUID.randomUUID())
-                        .with(user("tester").authorities(() -> "CREATE_DEBT")))
+                        .with(user("tester").authorities(() -> IntakeSecurityConfig.CREATE_DEBT)))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void should_returnForbidden_when_getAccountingEntriesWithoutAccountingReadPermission() throws Exception {
+        mockMvc.perform(get("/accounting-entries")
+                        .with(user("tester").authorities(() -> IntakeSecurityConfig.VIEW_DEBT_MASTER_DATA)))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void should_returnOk_when_getAccountingEntriesWithAccountingReadPermission() throws Exception {
+        mockMvc.perform(get("/accounting-entries")
+                        .with(user("tester").authorities(() -> IntakeSecurityConfig.ACCOUNTING_READ)))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void should_returnUnauthorized_when_getAccountingEntriesWithoutAuthentication() throws Exception {
+        mockMvc.perform(get("/accounting-entries"))
+                .andExpect(status().isUnauthorized());
     }
 
     @Test
     void should_returnCreated_when_postDebtorsWithCreateDebtorPermission() throws Exception {
         mockMvc.perform(post("/debtors")
                         .with(csrf())
-                        .with(user("tester").authorities(() -> "CREATE_DEBTOR"))
+                        .with(user("tester").authorities(() -> IntakeSecurityConfig.CREATE_DEBTOR))
                         .header("Idempotency-Key", "idem-sec-ok-1")
                         .header("X-Correlation-Id", "corr-sec-ok-1")
                         .contentType("application/json")
@@ -82,7 +103,7 @@ class IntakeSecurityMappingContextTest {
     void should_returnCreated_when_postDebtsWithCreateDebtPermissionAndExistingDebtor() throws Exception {
         MvcResult createDebtorResult = mockMvc.perform(post("/debtors")
                         .with(csrf())
-                        .with(user("tester").authorities(() -> "CREATE_DEBTOR"))
+                        .with(user("tester").authorities(() -> IntakeSecurityConfig.CREATE_DEBTOR))
                         .header("Idempotency-Key", "idem-sec-ok-2")
                         .header("X-Correlation-Id", "corr-sec-ok-2")
                         .contentType("application/json")
@@ -96,7 +117,7 @@ class IntakeSecurityMappingContextTest {
 
         mockMvc.perform(post("/debts")
                         .with(csrf())
-                        .with(user("tester").authorities(() -> "CREATE_DEBT"))
+                        .with(user("tester").authorities(() -> IntakeSecurityConfig.CREATE_DEBT))
                         .header("Idempotency-Key", "idem-sec-ok-3")
                         .header("X-Correlation-Id", "corr-sec-ok-3")
                         .contentType("application/json")
@@ -107,7 +128,7 @@ class IntakeSecurityMappingContextTest {
     @Test
     void should_returnNotFound_when_getDebtWithViewDebtMasterDataPermissionAndDebtMissing() throws Exception {
         mockMvc.perform(get("/debts/{debtId}", UUID.randomUUID())
-                        .with(user("tester").authorities(() -> "VIEW_DEBT_MASTER_DATA")))
+                        .with(user("tester").authorities(() -> IntakeSecurityConfig.VIEW_DEBT_MASTER_DATA)))
                 .andExpect(status().isNotFound());
     }
 }

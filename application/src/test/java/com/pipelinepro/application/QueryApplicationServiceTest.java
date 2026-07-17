@@ -13,6 +13,7 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
@@ -85,6 +86,34 @@ class QueryApplicationServiceTest {
         verify(paymentAllocationRepository).findById(allocationId);
         verify(debtRepository).findById(debtId);
         verify(proposalRepository).findByPaymentId(paymentId);
+    }
+
+    @Test
+    void should_delegate_batch_queries_for_debts_and_debtors() {
+        PaymentRepository paymentRepository = mock(PaymentRepository.class);
+        AllocationProposalRepository proposalRepository = mock(AllocationProposalRepository.class);
+        PaymentAllocationRepository paymentAllocationRepository = mock(PaymentAllocationRepository.class);
+        DebtRepository debtRepository = mock(DebtRepository.class);
+        DebtorRepository debtorRepository = mock(DebtorRepository.class);
+        QueryApplicationService service = new QueryApplicationService(
+                paymentRepository,
+                proposalRepository,
+                paymentAllocationRepository,
+                debtRepository,
+                debtorRepository);
+
+        UUID debtId = UUID.randomUUID();
+        UUID debtorId = UUID.randomUUID();
+        Debt debt = Debt.open(debtId, debtorId, "D-BATCH", new BigDecimal("10.00"), "EUR", null, Instant.parse("2026-06-01T13:00:00Z"));
+        Debtor debtor = Debtor.activeNaturalPerson(debtorId, "Batch Debtor", "85073003328", Instant.parse("2026-06-01T13:00:00Z"));
+        when(debtRepository.findByIds(Set.of(debtId))).thenReturn(List.of(debt));
+        when(debtorRepository.findByIds(Set.of(debtorId))).thenReturn(List.of(debtor));
+
+        assertThat(service.getDebts(Set.of(debtId))).containsExactly(debt);
+        assertThat(service.listDebtors(Set.of(debtorId))).containsExactly(debtor);
+
+        verify(debtRepository).findByIds(Set.of(debtId));
+        verify(debtorRepository).findByIds(Set.of(debtorId));
     }
 
     @Test

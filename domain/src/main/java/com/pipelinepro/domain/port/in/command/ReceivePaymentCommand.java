@@ -22,6 +22,7 @@ public record ReceivePaymentCommand(
     public ReceivePaymentCommand {
         Objects.requireNonNull(paymentId, "paymentId");
         requireNotBlank(bankTransactionReference, "bankTransactionReference");
+        Objects.requireNonNull(valueDate, "valueDate must not be null");
         Objects.requireNonNull(amount, "amount");
         if (amount.signum() <= 0) {
             throw new IllegalArgumentException("amount must be > 0");

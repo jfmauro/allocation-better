@@ -60,6 +60,19 @@ public class JpaDebtRepository implements DebtRepository {
     }
 
     @Override
+    public List<Debt> findByIds(Set<UUID> debtIds) {
+        log.info("+++start findByIds+++");
+        try {
+            if (debtIds == null || debtIds.isEmpty()) {
+                return List.of();
+            }
+            return springDataDebtRepository.findAllById(debtIds).stream().map(debtEntityMapper::toDomain).toList();
+        } finally {
+            log.info("+++end findByIds+++");
+        }
+    }
+
+    @Override
     public List<Debt> findByDebtorId(UUID debtorId) {
         log.info("+++start findByDebtorId+++");
         try {

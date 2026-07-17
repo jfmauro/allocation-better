@@ -18,6 +18,7 @@ import com.pipelinepro.domain.port.out.PaymentAllocationRepository;
 import com.pipelinepro.domain.port.out.PaymentRepository;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -101,6 +102,19 @@ public final class QueryApplicationService implements
     }
 
     @Override
+    public List<Debt> getDebts(Set<UUID> debtIds) {
+        log.info("+++start getDebts+++");
+        try {
+            if (debtIds == null || debtIds.isEmpty()) {
+                return List.of();
+            }
+            return debtRepository.findByIds(debtIds);
+        } finally {
+            log.info("+++end getDebts+++");
+        }
+    }
+
+    @Override
     public List<Debt> listDebtsByDebtor(UUID debtorId, List<DebtStatus> statuses) {
         log.info("+++start listDebtsByDebtor+++");
         try {
@@ -113,6 +127,19 @@ public final class QueryApplicationService implements
                     .toList();
         } finally {
             log.info("+++end listDebtsByDebtor+++");
+        }
+    }
+
+    @Override
+    public List<Debtor> listDebtors(Set<UUID> debtorIds) {
+        log.info("+++start listDebtors+++");
+        try {
+            if (debtorIds == null || debtorIds.isEmpty()) {
+                return List.of();
+            }
+            return debtorRepository.findByIds(debtorIds);
+        } finally {
+            log.info("+++end listDebtors+++");
         }
     }
 

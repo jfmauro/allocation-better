@@ -5,11 +5,10 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Index;
 import jakarta.persistence.PostLoad;
+import jakarta.persistence.PrePersist;
 import jakarta.persistence.PostPersist;
 import jakarta.persistence.Table;
 import jakarta.persistence.Transient;
@@ -35,7 +34,6 @@ import org.springframework.data.domain.Persistable;
 public class PaymentEntity implements Persistable<UUID> {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
     @Column(nullable = false, updatable = false)
     private UUID id;
 
@@ -101,6 +99,13 @@ public class PaymentEntity implements Persistable<UUID> {
     @PostPersist
     void markNotNewAfterLoad() {
         this.newEntity = false;
+    }
+
+    @PrePersist
+    void assignIdIfMissing() {
+        if (this.id == null) {
+            this.id = UUID.randomUUID();
+        }
     }
 
     public String getBankTransactionReference() {

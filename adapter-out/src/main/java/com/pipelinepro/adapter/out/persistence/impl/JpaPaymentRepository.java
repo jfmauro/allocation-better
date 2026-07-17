@@ -3,7 +3,6 @@ package com.pipelinepro.adapter.out.persistence.impl;
 import com.pipelinepro.adapter.out.persistence.mapper.PaymentEntityMapper;
 import com.pipelinepro.adapter.out.persistence.repository.SpringDataPaymentRepository;
 import com.pipelinepro.domain.Payment;
-import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import com.pipelinepro.domain.port.out.PaymentRepository;
 import java.util.Optional;
 import java.util.UUID;
@@ -31,17 +30,12 @@ public class JpaPaymentRepository implements PaymentRepository {
         log.info("+++start save+++");
         try {
             var entity = paymentEntityMapper.toEntity(payment);
-            entity.markNotNew();
-            try {
-                return paymentEntityMapper.toDomain(springDataPaymentRepository.saveAndFlush(entity));
-            } catch (ObjectOptimisticLockingFailureException ex) {
-                if (payment.version() != 0L) {
-                    throw ex;
-                }
-                entity.setId(null);
+            if (payment.version() == 0L) {
                 entity.setVersion(null);
                 return paymentEntityMapper.toDomain(springDataPaymentRepository.saveAndFlush(entity));
             }
+            entity.markNotNew();
+            return paymentEntityMapper.toDomain(springDataPaymentRepository.saveAndFlush(entity));
         } finally {
             log.info("+++end save+++");
         }

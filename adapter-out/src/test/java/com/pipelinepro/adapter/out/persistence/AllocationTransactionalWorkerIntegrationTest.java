@@ -5,12 +5,14 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.pipelinepro.adapter.out.persistence.entity.AllocationProposalEntity;
 import com.pipelinepro.adapter.out.persistence.impl.JpaAllocationTransactionalWorker;
+import com.pipelinepro.adapter.out.persistence.mapper.AccountingEntryEntityMapper;
 import com.pipelinepro.adapter.out.persistence.mapper.AllocationProposalEntityMapper;
 import com.pipelinepro.adapter.out.persistence.mapper.AuditEventEntityMapper;
 import com.pipelinepro.adapter.out.persistence.mapper.DebtEntityMapper;
 import com.pipelinepro.adapter.out.persistence.mapper.DebtorEntityMapper;
 import com.pipelinepro.adapter.out.persistence.mapper.PaymentAllocationEntityMapper;
 import com.pipelinepro.adapter.out.persistence.mapper.PaymentEntityMapper;
+import com.pipelinepro.adapter.out.persistence.repository.SpringDataAccountingEntryRepository;
 import com.pipelinepro.adapter.out.persistence.repository.SpringDataAuditEventRepository;
 import com.pipelinepro.adapter.out.persistence.repository.SpringDataAllocationProposalRepository;
 import com.pipelinepro.adapter.out.persistence.repository.SpringDataDebtRepository;
@@ -59,6 +61,7 @@ import org.springframework.transaction.annotation.Transactional;
 class AllocationTransactionalWorkerIntegrationTest {
 
     private static final AtomicBoolean FAIL_AUDIT_WRITE = new AtomicBoolean(false);
+    private static final AtomicBoolean FAIL_ACCOUNTING_WRITE = new AtomicBoolean(false);
 
     private final PaymentEntityMapper paymentEntityMapper = Mappers.getMapper(PaymentEntityMapper.class);
     private final DebtorEntityMapper debtorEntityMapper = Mappers.getMapper(DebtorEntityMapper.class);
@@ -83,11 +86,15 @@ class AllocationTransactionalWorkerIntegrationTest {
     private SpringDataAuditEventRepository springDataAuditEventRepository;
 
     @Autowired
+    private SpringDataAccountingEntryRepository springDataAccountingEntryRepository;
+
+    @Autowired
     private SpringDataAllocationProposalRepository springDataAllocationProposalRepository;
 
     @AfterEach
     void cleanDatabase() {
         springDataAuditEventRepository.deleteAll();
+        springDataAccountingEntryRepository.deleteAll();
         springDataPaymentAllocationRepository.deleteAll();
         springDataAllocationProposalRepository.deleteAll();
         springDataDebtRepository.deleteAll();
@@ -126,6 +133,11 @@ class AllocationTransactionalWorkerIntegrationTest {
                 .findByIdempotencyKey("IDEMP-CONCURRENT-1")
                 .orElseThrow()
                 .getId();
+        assertThat(springDataAccountingEntryRepository.count()).isEqualTo(1L);
+        assertThat(springDataAccountingEntryRepository.findAll()).singleElement().satisfies(entry -> {
+            assertThat(entry.getEventType().name()).isEqualTo("PAYMENT_ALLOCATION");
+            assertThat(entry.getSourceAggregateId()).isEqualTo(allocationId);
+        });
         List<String> eventTypes = springDataAuditEventRepository.findAll().stream()
                 .map(event -> event.getEventType())
                 .toList();
@@ -392,6 +404,67 @@ class AllocationTransactionalWorkerIntegrationTest {
         }
     }
 
+    @Test
+    void should_persist_payment_allocation_accounting_entry_when_allocation_succeeds() {
+        var fixture = persistPaymentAndDebt(new BigDecimal("100.00"));
+        Instant now = Instant.now();
+
+        AllocationExecutionRequest request = new AllocationExecutionRequest(
+                fixture.paymentId,
+                fixture.debtId,
+                null,
+                new BigDecimal("40.00"),
+                "IDEMP-ACCOUNTING-1",
+                "CMD-ACCOUNTING-1",
+                "worker-user",
+                now);
+
+        var allocation = allocationTransactionalWorker.executeAllocation(request);
+
+        assertThat(springDataAccountingEntryRepository.count()).isEqualTo(1L);
+        assertThat(springDataAccountingEntryRepository.findAll()).singleElement().satisfies(entry -> {
+            assertThat(entry.getEventType().name()).isEqualTo("PAYMENT_ALLOCATION");
+            assertThat(entry.getSourceAggregateType().name()).isEqualTo("ALLOCATION");
+            assertThat(entry.getSourceAggregateId()).isEqualTo(allocation.id());
+            assertThat(entry.getAmount()).isEqualByComparingTo("40.00");
+            assertThat(entry.getCurrency()).isEqualTo("EUR");
+        });
+    }
+
+    @Test
+    void should_rollback_allocation_when_accounting_write_fails() {
+        FAIL_ACCOUNTING_WRITE.set(true);
+
+        try {
+            var fixture = persistPaymentAndDebt(new BigDecimal("100.00"));
+
+            AllocationExecutionRequest request = new AllocationExecutionRequest(
+                    fixture.paymentId,
+                    fixture.debtId,
+                    null,
+                    new BigDecimal("40.00"),
+                    "IDEMP-ACCOUNTING-FAIL-1",
+                    "CMD-ACCOUNTING-FAIL-1",
+                    "worker-user",
+                    Instant.now());
+
+            assertThatThrownBy(() -> allocationTransactionalWorker.executeAllocation(request))
+                    .isInstanceOf(DataIntegrityViolationException.class)
+                    .hasMessageContaining("accounting-write-failure");
+
+            assertThat(springDataPaymentAllocationRepository.count()).isZero();
+            assertThat(springDataPaymentAllocationRepository.findByIdempotencyKey("IDEMP-ACCOUNTING-FAIL-1")).isEmpty();
+            assertThat(springDataAccountingEntryRepository.count()).isZero();
+
+            var savedPayment = springDataPaymentRepository.findById(fixture.paymentId).orElseThrow();
+            var savedDebt = springDataDebtRepository.findById(fixture.debtId).orElseThrow();
+            assertThat(savedPayment.getRemainingAmount()).isEqualByComparingTo("100.00");
+            assertThat(savedDebt.getRemainingAmount()).isEqualByComparingTo("100.00");
+        } finally {
+            FAIL_ACCOUNTING_WRITE.set(false);
+        }
+    }
+
     private PersistedFixture persistPaymentAndDebt(BigDecimal amount) {
         Instant now = Instant.now();
         Debtor debtor = Debtor.activeNaturalPerson(
@@ -504,6 +577,11 @@ class AllocationTransactionalWorkerIntegrationTest {
         }
 
         @Bean
+        AccountingEntryEntityMapper accountingEntryEntityMapper() {
+            return Mappers.getMapper(AccountingEntryEntityMapper.class);
+        }
+
+        @Bean
         AllocationProposalEntityMapper allocationProposalEntityMapper() {
             return Mappers.getMapper(AllocationProposalEntityMapper.class);
         }
@@ -515,10 +593,12 @@ class AllocationTransactionalWorkerIntegrationTest {
                 SpringDataAllocationProposalRepository springDataAllocationProposalRepository,
                 SpringDataPaymentAllocationRepository springDataPaymentAllocationRepository,
                 SpringDataAuditEventRepository springDataAuditEventRepository,
+                SpringDataAccountingEntryRepository springDataAccountingEntryRepository,
                 PaymentEntityMapper paymentEntityMapper,
                 DebtEntityMapper debtEntityMapper,
                 PaymentAllocationEntityMapper paymentAllocationEntityMapper,
                 AuditEventEntityMapper auditEventEntityMapper,
+                AccountingEntryEntityMapper accountingEntryEntityMapper,
                 AllocationProposalEntityMapper allocationProposalEntityMapper) {
             return new JpaAllocationTransactionalWorker(
                     springDataPaymentRepository,
@@ -526,11 +606,18 @@ class AllocationTransactionalWorkerIntegrationTest {
                     springDataAllocationProposalRepository,
                     springDataPaymentAllocationRepository,
                     springDataAuditEventRepository,
+                    springDataAccountingEntryRepository,
                     paymentEntityMapper,
                     debtEntityMapper,
                     paymentAllocationEntityMapper,
                     auditEventEntityMapper,
+                    accountingEntryEntityMapper,
                     allocationProposalEntityMapper);
+        }
+
+        @Bean
+        AccountingEntrySaveFailureAspect accountingEntrySaveFailureAspect() {
+            return new AccountingEntrySaveFailureAspect();
         }
     }
 
@@ -541,6 +628,18 @@ class AllocationTransactionalWorkerIntegrationTest {
         Object failAuditWriteWhenEnabled(ProceedingJoinPoint joinPoint) throws Throwable {
             if (FAIL_AUDIT_WRITE.get()) {
                 throw new DataIntegrityViolationException("audit-write-failure");
+            }
+            return joinPoint.proceed();
+        }
+    }
+
+    @Aspect
+    static class AccountingEntrySaveFailureAspect {
+
+        @Around("execution(* com.pipelinepro.adapter.out.persistence.repository.SpringDataAccountingEntryRepository.saveAndFlush(..))")
+        Object failAccountingWriteWhenEnabled(ProceedingJoinPoint joinPoint) throws Throwable {
+            if (FAIL_ACCOUNTING_WRITE.get()) {
+                throw new DataIntegrityViolationException("accounting-write-failure");
             }
             return joinPoint.proceed();
         }

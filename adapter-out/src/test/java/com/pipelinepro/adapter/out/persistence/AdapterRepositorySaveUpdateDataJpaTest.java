@@ -77,6 +77,7 @@ class AdapterRepositorySaveUpdateDataJpaTest {
                 now);
 
         Payment persisted = adapterRepository.save(payment);
+        assertThat(persisted.id()).isEqualTo(payment.id());
         persisted.allocate(new BigDecimal("50.00"), now.plusSeconds(1));
         Payment updated = adapterRepository.save(persisted);
 

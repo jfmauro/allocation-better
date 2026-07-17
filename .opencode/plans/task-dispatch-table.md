@@ -1,25 +1,39 @@
-# Task Dispatch Table (Extension Business)
+# Task Dispatch Table — Extension Implementation (from extension-plan §8)
 
-Source plan: `.opencode/plans/extension-plan.md` (Section 8 implementation steps only)
+Scope is strictly limited to extension implementation steps listed in `.opencode/plans/extension-plan.md` section 8.
 
-| Step number | Task description | Target subagent | Dependencies | Can parallelize with | Verification command(s) | Non-regression check | Mandatory review gates |
-|---|---|---|---|---|---|---|---|
-| 1 | **Layer 1 (domain)** — Add debtor/debt intake commands, inbound ports, outbound ports, and domain validation policies (UUID policy, allocatable statuses policy). | domain-engineer | None | 2, 4 | `mvn -q test -pl domain` | Run full existing domain tests | 1) `spec-reviewer` APPROVED, then 2) `code-reviewer` APPROVED |
-| 2 | **Layer 2 (adapter-out)** — Add intake idempotency persistence (`IntakeRequest` entity/repo/gateway) and transactional workers for debtor/debt create **(edits-existing: persistence wiring/config/repositories)**. | persistence-engineer | 1; integrity of existing persistence wiring as-of start (`adapter-out` existing config/repositories) | 4 | `mvn -q test -pl adapter-out -Dtest='*Intake*Test,*Repository*Test'` | Existing adapter-out tests remain green | 1) `spec-reviewer` APPROVED, then 2) `code-reviewer` APPROVED |
-| 3 | **Layer 2 (adapter-out)** — Implement global debt reference uniqueness migration and conflict mapping **(edits-existing: `DebtEntity`, migration scripts, repository checks)**. | persistence-engineer | 2; integrity of existing debt persistence/allocation mappings as-of start | None (conservative sequencing: shared persistence/migration surface) | `mvn -q test -pl adapter-out -Dtest='*Debt*Constraint*Test,*Concurrency*Test'` | Existing debt query/allocation persistence tests green | 1) `spec-reviewer` APPROVED, then 2) `code-reviewer` APPROVED |
-| 4 | **Layer 2 (application)** — Add intake application services orchestrating ports and lifecycle audit emission (`*_REQUESTED/*_CREATED/*_REJECTED`). | domain-engineer | 1; integrity of existing allocation application services as-of start | 2 | `mvn -q test -pl application` | Existing allocation service tests green | 1) `spec-reviewer` APPROVED, then 2) `code-reviewer` APPROVED |
-| 5 | **Layer 3 (adapter-in)** — Add debtor/debt write endpoints + DTOs + required header validation (`Idempotency-Key`, `X-Correlation-Id`) + permission checks **(edits-existing: optional existing debt-controller wiring)**. | web-engineer | 4, 3; integrity of existing payment/proposal/debt controllers and security entry points as-of start | 7 | `mvn -q test -pl adapter-in -Dtest='*Debtor*Controller*Test,*Debt*Controller*Test,*Security*Test'` | Existing payment/proposal controller tests green | 1) `spec-reviewer` APPROVED, then 2) `code-reviewer` APPROVED |
-| 6 | **Layer 3 (bootstrap)** — Register new beans, security permission mappings, and observability meters/traces/log correlation for intake **(edits-existing: `ApplicationServiceConfig`, `application.yml`, security config)**. | web-engineer | 5, 3; integrity of existing bootstrap wiring/security/observability config as-of start | None | `mvn -q test -pl bootstrap -Dtest='*Context*Test,*Observability*Test'` | Existing bootstrap smoke tests green | 1) `spec-reviewer` APPROVED, then 2) `code-reviewer` APPROVED |
-| 7 | **Layer 4 (frontend)** — Add debtor intake/list and debt intake pages + minimal navigation wiring **(edits-existing: existing shell/menu page)**. | frontend-engineer | 5; integrity of existing shell/menu static assets as-of start | 5 | `mvn -q test -pl bootstrap -Dtest='*UiSmoke*Test'` | Existing static page tests green | 1) `spec-reviewer` APPROVED, then 2) `code-reviewer` APPROVED |
-| 8 | **Layer 5 (hardening)** — Add extension-focused concurrency, idempotency replay, intake-no-allocation-decoupling, and SLO alert-rule tests/checks **(edits-existing: test modules + monitoring config)**. | test-engineer | 6, 7; integrity of existing concurrency/integration test baselines and monitoring config as-of start | None | `mvn -q test -pl adapter-out,bootstrap -Dtest='*Concurrency*Test,*Idempotency*Test,*Integration*Test'` | Full regression suite green | 1) `spec-reviewer` APPROVED, then 2) `code-reviewer` APPROVED |
+## Layer 1 — Domain
 
-## Parallel groups
+| Step number | Task description | Target subagent | Dependencies | Can parallelize with | Verification command/check | Non-regression check |
+|---|---|---|---|---|---|---|
+| 1 | Add `AccountingEntry` domain model + value objects/enums (`AccountingEventType`, `SourceAggregateType`) with immutability and guard clauses (new-files) | domain-engineer | None | None | Domain unit tests for invariants/construction (e.g. `mvn -q test -pl domain`) | Existing domain tests remain green |
+| 2 | Add accounting ports: outbound `AccountingEntryRepository` and inbound `AccountingEntryQueryUseCase` (new-files) | domain-engineer | 1 | 3, 6 | Port contract/unit tests with mocks (e.g. `mvn -q test -pl domain`) | Existing domain contracts unchanged |
 
-- **PG-1:** Steps **2** and **4** (after step 1 is green).
-- **PG-2:** Steps **5** and **7** may overlap once step 5 API contracts are stable; no shared-file edits planned between adapter-in and frontend surfaces.
+## Layer 2 — Parallel track (Adapter-out + Application)
 
-## Ordering policy applied
+| Step number | Task description | Target subagent | Dependencies | Can parallelize with | Verification command/check | Non-regression check |
+|---|---|---|---|---|---|---|
+| 3 | Add accounting persistence stack: JPA entity, Spring Data repository, mapper, repository implementation (new-files) | persistence-engineer | 2 | 6 | `@DataJpaTest` for insert/query/order/filter + index-aware access paths (e.g. `mvn -q test -pl adapter-out`) | Existing adapter-out repository tests green |
+| 4 | Wire strict-blocking `DEBT_ARRIVAL` insert in debt intake transactional worker (**edits-existing**: `adapter-out/.../JpaDebtIntakeTransactionalWorker.java`) | persistence-engineer | 3; baseline integrity of existing `JpaDebtIntakeTransactionalWorker` at build start | 5, 7, 8 | Success path creates exactly one `DEBT_ARRIVAL`; accounting insert failure triggers full rollback (e.g. `mvn -q test -pl adapter-out`) | Existing debt intake behavior unchanged |
+| 5 | Wire strict-blocking `PAYMENT_ALLOCATION` insert in allocation transactional worker (**edits-existing**: `adapter-out/.../JpaAllocationTransactionalWorker.java`) | persistence-engineer | 3; baseline integrity of existing `JpaAllocationTransactionalWorker` at build start | 4, 7, 8 | Concurrency/transaction tests: one `PAYMENT_ALLOCATION` per successful allocation; rollback on accounting failure (e.g. `mvn -q test -pl adapter-out`) | Existing allocation lock/idempotency tests green |
+| 6 | Add accounting application services (write + read query), including filter validation (`fromDate <= toDate`) (new-files) | domain-engineer | 2 | 3 | JUnit5/Mockito orchestration + validation tests (e.g. `mvn -q test -pl application`) | Existing application service tests green |
+| 7 | Wire payment intake to create `PAYMENT_ARRIVAL` with `occurredAt = bankDate` (**edits-existing**: `application/.../PaymentIntakeApplicationService.java` or delegated worker wiring) | domain-engineer | 6, 3; baseline integrity of existing payment intake flow at build start | 4, 5, 8 | Tests assert `occurredAt=bankDate`; failed accounting write means no successful payment completion (e.g. `mvn -q test -pl application`) | Existing payment intake contract tests green |
 
-- Restricted strictly to extension implementation steps from extension plan section 8 (#1..#8), each included exactly once.
-- Dependency-aware sequencing with conservative serialization on shared edits-existing persistence/bootstrap surfaces.
-- Mandatory per-step review gate enforced in this order: **spec-reviewer -> code-reviewer**.
+## Layer 3 — Web (Adapter-in + Bootstrap wiring)
+
+| Step number | Task description | Target subagent | Dependencies | Can parallelize with | Verification command/check | Non-regression check |
+|---|---|---|---|---|---|---|
+| 8 | Add `GET /accounting-entries` controller, DTOs, mapper, validation, and `ACCOUNTING_READ` enforcement at endpoint level (new-files) | web-engineer | 6, 3 | 4, 5, 7 | `@WebMvcTest`: 200/400/403, sort/filter behavior, empty list response (e.g. `mvn -q test -pl adapter-in`) | Existing controller tests unchanged |
+| 9 | Register beans and security mapping for accounting read path (**edits-existing**: `bootstrap/.../ApplicationServiceConfig.java` + security config) | web-engineer | 8; baseline integrity of existing bootstrap security/bean graph at build start | None | Startup/wiring checks + security mapping tests (e.g. `mvn -q test -pl bootstrap`) | Existing bean graph and security behavior unaffected |
+
+## Layer 4 — Frontend
+
+| Step number | Task description | Target subagent | Dependencies | Can parallelize with | Verification command/check | Non-regression check |
+|---|---|---|---|---|---|---|
+| 10 | Add accounting entries UI page + JS (new-files) and add navigation link (**edits-existing**: `bootstrap/src/main/resources/static/index.html`) | frontend-engineer | 8, 9; baseline integrity of existing `index.html` navigation at build start | 11 | Manual browser validation of filters/table/empty state against `GET /accounting-entries`; smoke check navigation links | Existing pages remain functional |
+
+## Layer 5 — Hardening
+
+| Step number | Task description | Target subagent | Dependencies | Can parallelize with | Verification command/check | Non-regression check |
+|---|---|---|---|---|---|---|
+| 11 | Add/extend transactional + idempotency tests for all three accounting triggers and strict rollback semantics (**edits-existing** test suites in adapter-out/application) | test-engineer | 4, 5, 7 (and 8, 9 for end-to-end read-path confidence) | 10 | Run impacted module suites once per completed layer: `mvn -q test -pl domain`, `mvn -q test -pl application`, `mvn -q test -pl adapter-out`, `mvn -q test -pl adapter-in`, `mvn -q test -pl bootstrap` | Pre-existing full suite for impacted modules remains green |

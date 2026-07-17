@@ -1,6 +1,8 @@
 package com.pipelinepro.bootstrap.config;
 
 import com.pipelinepro.application.AllocationExecutionApplicationService;
+import com.pipelinepro.application.AccountingEntryApplicationService;
+import com.pipelinepro.application.AccountingEntryQueryApplicationService;
 import com.pipelinepro.application.CreateDebtIntakeApplicationService;
 import com.pipelinepro.application.CreateDebtorIntakeApplicationService;
 import com.pipelinepro.application.PaymentIntakeApplicationService;
@@ -10,8 +12,10 @@ import com.pipelinepro.application.ProposalQueryApplicationService;
 import com.pipelinepro.application.QueryApplicationService;
 import com.pipelinepro.application.port.out.DebtIntakeWorker;
 import com.pipelinepro.application.port.out.DebtorIntakeWorker;
+import com.pipelinepro.application.port.out.PaymentIntakeTransactionalWorker;
 import com.pipelinepro.adapter.out.persistence.impl.JpaDebtIntakeTransactionalWorker;
 import com.pipelinepro.adapter.out.persistence.impl.JpaDebtorIntakeTransactionalWorker;
+import com.pipelinepro.adapter.out.persistence.impl.JpaPaymentIntakeTransactionalWorker;
 import com.pipelinepro.domain.AllocationProposal;
 import com.pipelinepro.domain.AllocationProposalCandidate;
 import com.pipelinepro.domain.Debt;
@@ -20,9 +24,11 @@ import com.pipelinepro.domain.Debtor;
 import com.pipelinepro.domain.Payment;
 import com.pipelinepro.domain.PaymentAllocation;
 import com.pipelinepro.domain.port.in.CreateDebtIntakeUseCase;
+import com.pipelinepro.domain.port.in.AccountingEntryQueryUseCase;
 import com.pipelinepro.domain.port.in.CreateDebtorIntakeUseCase;
 import com.pipelinepro.domain.port.in.ExecuteAllocationUseCase;
 import com.pipelinepro.domain.port.in.GetAllocationDetailUseCase;
+import com.pipelinepro.domain.port.in.GetAllocationProposalDetailsUseCase;
 import com.pipelinepro.domain.port.in.GetProposalCandidatesUseCase;
 import com.pipelinepro.domain.port.in.GetProposalDetailUseCase;
 import com.pipelinepro.domain.port.in.QueryDebtorUseCase;
@@ -36,6 +42,7 @@ import com.pipelinepro.domain.port.in.command.CreateDebtorCommand;
 import com.pipelinepro.domain.port.out.AllocationProposalCandidateRepository;
 import com.pipelinepro.domain.port.out.AllocationProposalRepository;
 import com.pipelinepro.domain.port.out.AllocationTransactionalWorker;
+import com.pipelinepro.domain.port.out.AccountingEntryRepository;
 import com.pipelinepro.domain.port.out.AuditEventGateway;
 import com.pipelinepro.domain.port.out.DebtRepository;
 import com.pipelinepro.domain.port.out.DebtorRepository;
@@ -80,14 +87,45 @@ public class ApplicationServiceConfig {
 
     @Bean
     public ReceivePaymentUseCase receivePaymentUseCase(
-            PaymentRepository paymentRepository,
-            AuditEventGateway auditEventGateway,
-            MatchPaymentUseCase matchPaymentUseCase) {
+            PaymentIntakeTransactionalWorker paymentIntakeTransactionalWorker) {
         log.info("+++start receivePaymentUseCase+++");
         try {
-            return new PaymentIntakeApplicationService(paymentRepository, auditEventGateway, matchPaymentUseCase);
+            return new PaymentIntakeApplicationService(paymentIntakeTransactionalWorker);
         } finally {
             log.info("+++end receivePaymentUseCase+++");
+        }
+    }
+
+    @Bean
+    public PaymentIntakeTransactionalWorker paymentIntakeTransactionalWorker(
+            JpaPaymentIntakeTransactionalWorker jpaPaymentIntakeTransactionalWorker) {
+        log.info("+++start paymentIntakeTransactionalWorker+++");
+        try {
+            return jpaPaymentIntakeTransactionalWorker::receivePayment;
+        } finally {
+            log.info("+++end paymentIntakeTransactionalWorker+++");
+        }
+    }
+
+    @Bean
+    public AccountingEntryApplicationService accountingEntryApplicationService(
+            AccountingEntryRepository accountingEntryRepository) {
+        log.info("+++start accountingEntryApplicationService+++");
+        try {
+            return new AccountingEntryApplicationService(accountingEntryRepository);
+        } finally {
+            log.info("+++end accountingEntryApplicationService+++");
+        }
+    }
+
+    @Bean
+    public AccountingEntryQueryUseCase accountingEntryQueryUseCase(
+            AccountingEntryRepository accountingEntryRepository) {
+        log.info("+++start accountingEntryQueryUseCase+++");
+        try {
+            return new AccountingEntryQueryApplicationService(accountingEntryRepository);
+        } finally {
+            log.info("+++end accountingEntryQueryUseCase+++");
         }
     }
 
@@ -195,12 +233,16 @@ public class ApplicationServiceConfig {
     @Bean
     public ProposalQueryUseCases proposalQueryUseCases(
             AllocationProposalRepository allocationProposalRepository,
-            AllocationProposalCandidateRepository allocationProposalCandidateRepository) {
+            AllocationProposalCandidateRepository allocationProposalCandidateRepository,
+            QueryDebtUseCase queryDebtUseCase,
+            QueryDebtorUseCase queryDebtorUseCase) {
         log.info("+++start proposalQueryUseCases+++");
         try {
             ProposalQueryApplicationService delegate = new ProposalQueryApplicationService(
                     allocationProposalRepository,
-                    allocationProposalCandidateRepository);
+                    allocationProposalCandidateRepository,
+                    queryDebtUseCase,
+                    queryDebtorUseCase);
             return new ProposalQueryUseCases(delegate);
         } finally {
             log.info("+++end proposalQueryUseCases+++");
@@ -259,12 +301,32 @@ public class ApplicationServiceConfig {
         }
 
         @Override
+        public List<Debt> getDebts(java.util.Set<UUID> debtIds) {
+            log.info("+++start getDebts+++");
+            try {
+                return delegate.getDebts(debtIds);
+            } finally {
+                log.info("+++end getDebts+++");
+            }
+        }
+
+        @Override
         public List<Debt> listDebtsByDebtor(UUID debtorId, List<DebtStatus> statuses) {
             log.info("+++start listDebtsByDebtor+++");
             try {
                 return delegate.listDebtsByDebtor(debtorId, statuses);
             } finally {
                 log.info("+++end listDebtsByDebtor+++");
+            }
+        }
+
+        @Override
+        public List<Debtor> listDebtors(java.util.Set<UUID> debtorIds) {
+            log.info("+++start listDebtors+++");
+            try {
+                return delegate.listDebtors(debtorIds);
+            } finally {
+                log.info("+++end listDebtors+++");
             }
         }
 
@@ -280,7 +342,7 @@ public class ApplicationServiceConfig {
     }
 
     private static final class ProposalQueryUseCases
-            implements GetProposalDetailUseCase, GetProposalCandidatesUseCase {
+            implements GetAllocationProposalDetailsUseCase, GetProposalDetailUseCase, GetProposalCandidatesUseCase {
 
         private static final Logger log = LoggerFactory.getLogger(ProposalQueryUseCases.class);
 
@@ -288,6 +350,16 @@ public class ApplicationServiceConfig {
 
         private ProposalQueryUseCases(ProposalQueryApplicationService delegate) {
             this.delegate = delegate;
+        }
+
+        @Override
+        public Optional<com.pipelinepro.domain.AllocationProposalDetails> getProposalDetails(UUID proposalId) {
+            log.info("+++start getProposalDetails+++");
+            try {
+                return delegate.getProposalDetails(proposalId);
+            } finally {
+                log.info("+++end getProposalDetails+++");
+            }
         }
 
         @Override

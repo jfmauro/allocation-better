@@ -21,6 +21,7 @@ public class IntakeSecurityConfig {
     public static final String CREATE_DEBTOR = "CREATE_DEBTOR";
     public static final String VIEW_DEBT_MASTER_DATA = "VIEW_DEBT_MASTER_DATA";
     public static final String CREATE_DEBT = "CREATE_DEBT";
+    public static final String ACCOUNTING_READ = "ACCOUNTING_READ";
 
     private static final Logger log = LoggerFactory.getLogger(IntakeSecurityConfig.class);
     private final Environment environment;
@@ -84,6 +85,8 @@ public class IntakeSecurityConfig {
                     .authorizeHttpRequests(authorize -> authorize
                             .requestMatchers("/app/**").permitAll()
                             .requestMatchers("/actuator/health", "/actuator/info").permitAll()
+                            .requestMatchers(HttpMethod.GET, "/accounting-entries", "/accounting-entries/**")
+                            .hasAuthority(ACCOUNTING_READ)
                             .anyRequest().authenticated());
             return httpSecurity.build();
         } finally {

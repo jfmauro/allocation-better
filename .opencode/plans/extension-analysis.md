@@ -1,268 +1,266 @@
 # Extension Analysis
 
-**Trigger mode:** extension-business  
-**SAD check:** with-sad  
-**Date:** 2026-06-30  
+**Trigger mode:** extension-business
+**SAD check:** with-sad
+**Date:** 2026-07-10
 **Author:** technical-functional-analyst
 
 ## 1. Trigger
 
 ### 1.1 Source
 
-Authoritative new scope (inbox):
-- `knowledge/inbox/confluence-list-page-id.md` (IDs: `7117963683`, `7116980899`). [source: knowledge/inbox/confluence-list-page-id.md]
-- `confluence:7117963683` (new business epic for debtor/debt intake). [source: confluence:7117963683]
-- `confluence:7116980899` (SAD v2 addendum including intake in scope). [source: confluence:7116980899]
+Authoritative new scope files under `knowledge/inbox/`:
+- `knowledge/inbox/confluence-list-page-id.md` (declares page IDs `7153680430`, `7153680541`)
+- `confluence:7153680430` (Epic: Minimal Accounting Entries for Core Financial Events)
+- `confluence:7153680541` (Addendum — SAD v3: Minimal Accounting Entries In Scope)
 
-Historical baseline:
-- `knowledge/baseline/confluence-list-page-id.md` (IDs: `7078052229`, `7091912737`). [source: knowledge/baseline/confluence-list-page-id.md]
-- `confluence:7078052229` (baseline payment allocation epic). [source: confluence:7078052229]
-- `confluence:7091912737` (baseline SAD). [source: confluence:7091912737]
-- `.opencode/plans/technical-analysis.md` and `.opencode/plans/architecture-plan.md`. [source: .opencode/plans/technical-analysis.md] [source: .opencode/plans/architecture-plan.md]
+Historical context under `knowledge/baseline/`:
+- `knowledge/baseline/v-1/confluence-list-page-id.md`
+- `confluence:7078052229` (Payment allocation epic baseline)
+- `confluence:7091912737` (SAD baseline)
+- `knowledge/baseline/v-2/confluence-list-page-id.md`
+- `confluence:7117963683` (Debtor/debt intake epic)
+- `confluence:7116980899` (SAD v2 addendum)
 
 ### 1.2 Summary
 
-The extension adds upstream intake capabilities (debtor creation + debt creation + duplicate prevention + intake auditability) while preserving the existing payment-driven matching/allocation lifecycle and its strict safety rules. [source: confluence:7117963683] [source: confluence:7116980899] [source: confluence:7078052229]
+The new scope adds a minimal immutable accounting trace as an additive capability: one new aggregate for accounting entries, automatic creation on three successful existing business events (debt creation, payment reception, allocation execution), and one read-only consultation capability with filters (`eventType`, `fromDate`, `toDate`) and newest-first order (source: `confluence:7153680430`, `confluence:7153680541`).
 
 ### 1.3 Mode-switch recommendation
 
-**Confirm extension-business**. Scope is additive and explicitly preserves allocation behavior; no primary behavior rewrite is requested. [source: confluence:7117963683] [source: confluence:7116980899]
+**Confirm extension-business.**
+Rationale: the inbox scope is additive (new aggregate + new read API/screen + side-effect wiring) and explicitly preserves existing allocation/matching rules without replacing current behavior (source: `confluence:7153680430`, `confluence:7153680541`).
 
 ## 2. New business scope
 
 ### 2.1 Epic
 
-- **Epic:** Debtor and Debt Intake for Payment Allocation (Pre-Allocation Scope). [source: confluence:7117963683]
-- **Business objective:** enable creation/maintenance of debtor and debt reference data before payment allocation.
-- **Business value:** higher matching readiness, better data quality, full intake traceability.
-- **Priority:** high.
+- **Title:** Minimal Accounting Entries for Core Financial Events
+- **Business objective:** provide formal accounting traceability for core movements
+- **Business value:** finance/audit visibility and traceability with low-complexity design
+- **Priority:** high (auditability/compliance enabler)
 
 ### 2.2 Features
 
 | Feature | Description | Priority |
 |---|---|---|
-| Debtor intake | Create debtor with mandatory/type-based validation and duplicate prevention | High |
-| Debt intake | Create debt linked to existing debtor with positive amount and valid opening data | High |
-| Decoupling guardrail | Intake must never trigger allocation | High |
-| Intake auditability | Log intake request/outcome/duplicate/rejection events | High |
+| Accounting trace write side | Create immutable accounting entries on successful debt intake, payment intake, and allocation execution | High |
+| Accounting consultation | Expose read-only listing endpoint and standalone UI with event/date filters | High |
 
 ### 2.3 User stories
 
-#### User Story [US-DI-001 — Create Debtor]
+#### User Story [US-ACC-001 — Create Entry on Debt Arrival]
+
 ##### 1. Context and Objective
-- Add debtor creation (person/enterprise) as upstream flow. [source: confluence:7117963683]
+When debt creation succeeds, persist one immutable accounting entry with `eventType=DEBT_ARRIVAL` (source: `confluence:7153680430`, `confluence:7153680541`).
+
 ##### 2. Detailed Functional Specifications
-- Validate mandatory fields per debtor type.
-- Assign unique debtor UUID.
-- Default status active unless policy override.
-- No allocation/matching side effects.
+- Trigger only after successful debt creation.
+- Entry mandatory fields: event type, source aggregate type/id, amount, currency, occurredAt.
+- No entry on rejected debt creation.
+
 ##### 3. API Contract
-- `POST /debtors` (new) with debtor identity payload.
-- `GET /debtors/{id}` (new) for debtor detail retrieval.
-- `GET /debtors` (new) for controlled debtor search/list.
-- `201` on success, `400` invalid input, `409` duplicate.
-- Audit: `DEBTOR_CREATION_REQUESTED`, `DEBTOR_CREATED`, `DEBTOR_CREATION_REJECTED`.
-- Authorization: create/read endpoints require dedicated master-data access permissions (proposed: `DEBTOR_MASTER_WRITE`, `DEBTOR_MASTER_READ` — requires architect confirmation).
+- No new write API.
+- Existing `POST /debts` behavior preserved; adds internal side effect only (`adapter-in/.../DebtController.java`).
+
 ##### 4. Data Model
-- Reuse `debtor` entity/table; add write path (currently query-focused repository API). [source: adapter-out/src/main/java/com/pipelinepro/adapter/out/persistence/entity/DebtorEntity.java]
+- New table/aggregate `accounting_entry` (append-only).
+- Row includes: `id`, `event_type`, `source_aggregate_type`, `source_aggregate_id`, `amount`, `currency`, `occurred_at`, `created_at`.
+
 ##### 5. Business Rules and Validations
-- BR-INTAKE-01 and FRQ-020/021/022 apply.
+- BR-ACC-01, BR-ACC-03, BR-ACC-04 apply.
+- `amount > 0`, non-null mandatory fields.
+
 ##### 6. Error Management
-- Invalid payload -> business validation error.
-- Duplicate -> conflict error.
+- If accounting insert fails, operation should fail and rollback the debt transaction (architectural intent from same-transaction requirement; source: `confluence:7153680430`).
+
 ##### 7. Edge Cases
-- Same enterprise/national identifier submitted concurrently.
+- Duplicate debt create retries via idempotency must not duplicate accounting entries.
+- Replayed successful idempotent request should return existing debt and not create extra accounting record.
+
 ##### 8. Dependencies
-- Domain port additions + persistence adapter write method + controller + mapper + bean wiring.
+- Debt intake worker and idempotency flow (`adapter-out/.../JpaDebtIntakeTransactionalWorker.java`).
+
 ##### 9. Technical Acceptance Criteria
-- WebMvc + service + DataJpa tests for create success/invalid/duplicate.
+- Test: successful create debt -> exactly 1 `DEBT_ARRIVAL` entry.
+- Test: rejected create debt -> 0 new entry.
+- Test: idempotent replay -> still exactly 1 entry.
+
 ##### 10. UML Sequence Diagram
 ```plantuml
 @startuml
-actor IntakeClient
-participant DebtorController
-participant DebtorIntakeService
-participant DebtorRepository
-participant AuditGateway
-IntakeClient -> DebtorController: POST /debtors
-DebtorController -> DebtorIntakeService: createDebtor(command)
-DebtorIntakeService -> DebtorRepository: save(debtor)
-DebtorIntakeService -> AuditGateway: DEBTOR_CREATED
-DebtorController --> IntakeClient: 201
+actor Client
+participant "DebtController" as C
+participant "CreateDebtIntakeApplicationService" as A
+participant "JpaDebtIntakeTransactionalWorker" as W
+participant "AccountingEntryRepo" as R
+
+Client -> C: POST /debts
+C -> A: createDebt(command)
+A -> W: createDebt(...)
+W -> W: persist Debt
+W -> R: insert DEBT_ARRIVAL
+W --> A: Debt
+A --> C: DebtResponse (201)
 @enduml
 ```
 
-#### User Story [US-DI-002 — Prevent Invalid or Duplicate Debtor Registration]
+#### User Story [US-ACC-002 — Create Entry on Payment Arrival]
+
 ##### 1. Context and Objective
-- Block invalid/duplicate debtor records before persistence. [source: confluence:7117963683]
+When payment reception succeeds, persist one immutable accounting entry with `eventType=PAYMENT_ARRIVAL` (source: `confluence:7153680430`, `confluence:7153680541`).
+
 ##### 2. Detailed Functional Specifications
-- Validate identity rules.
-- Check duplicate keys before create.
-- On duplicate: block or route for review (policy-driven).
+- Trigger after successful payment persistence.
+- No entry when payment reception fails/rejected.
+
 ##### 3. API Contract
-- `POST /debtors` same endpoint; duplicate produces `409`.
+- Existing `POST /payments` response contract preserved (`adapter-in/.../PaymentController.java`).
+
 ##### 4. Data Model
-- Preserve unique constraints on `national_number_hash` and `enterprise_number`. [source: adapter-out/src/main/java/com/pipelinepro/adapter/out/persistence/entity/DebtorEntity.java]
+- Reuse `accounting_entry` with `source_aggregate_type=PAYMENT`.
+
 ##### 5. Business Rules and Validations
-- BR-INTAKE-05 + FRQ-022.
+- One successful event => exactly one entry.
+
 ##### 6. Error Management
-- Duplicate detection logged as `DUPLICATE_DEBTOR_DETECTED`.
+- Accounting write failure should rollback payment intake transaction.
+
 ##### 7. Edge Cases
-- Race condition on duplicate detection (must rely on DB uniqueness + error mapping).
+- Duplicate `bankTransactionReference` rejection must create no accounting entry.
+
 ##### 8. Dependencies
-- Debtor repository duplicate lookups and conflict mapping.
+- Payment intake service flow (`application/.../PaymentIntakeApplicationService.java`), payment repository (`adapter-out/.../JpaPaymentRepository.java`).
+
 ##### 9. Technical Acceptance Criteria
-- Parallel create tests ensure one succeeds, one conflicts.
+- Test: successful intake -> 1 `PAYMENT_ARRIVAL` entry.
+- Test: duplicate payment rejected -> 0 new `PAYMENT_ARRIVAL` entry.
+
 ##### 10. UML Sequence Diagram
 ```plantuml
 @startuml
-actor IntakeClient
-participant DebtorIntakeService
-participant DebtorRepository
-IntakeClient -> DebtorIntakeService: createDebtor
-DebtorIntakeService -> DebtorRepository: checkDuplicate
-alt duplicate
-DebtorIntakeService --> IntakeClient: 409
-else unique
-DebtorIntakeService -> DebtorRepository: save
-DebtorIntakeService --> IntakeClient: 201
-end
+actor Client
+participant "PaymentController" as C
+participant "PaymentIntakeApplicationService" as A
+participant "PaymentRepository" as P
+participant "AccountingEntryRepo" as R
+
+Client -> C: POST /payments
+C -> A: receivePayment(command)
+A -> P: save(payment)
+A -> R: insert PAYMENT_ARRIVAL
+A --> C: PaymentResponse (201)
 @enduml
 ```
 
-#### User Story [US-DI-003 — Create Debt Linked to Existing Debtor]
+#### User Story [US-ACC-003 — Create Entry on Payment Allocation]
+
 ##### 1. Context and Objective
-- Add debt creation requiring an existing debtor. [source: confluence:7117963683]
+When allocation execution succeeds, persist one immutable accounting entry with `eventType=PAYMENT_ALLOCATION` (source: `confluence:7153680430`, `confluence:7153680541`).
+
 ##### 2. Detailed Functional Specifications
-- Validate debtor exists.
-- Validate amount > 0, debt reference rules, opening status policy, and valid currency according to business policy.
-- Create debt linked by debtorId.
+- Trigger in allocation transactional boundary.
+- No entry if allocation fails/rolls back.
+
 ##### 3. API Contract
-- `POST /debts` (new), `201`/`400`/`404`/`409`.
-- Audit: `DEBT_CREATION_REQUESTED`, `DEBT_CREATED`, `DEBT_CREATION_REJECTED`.
-- Authorization: debt create/read requires dedicated master-data access permissions (proposed: `DEBT_MASTER_WRITE`, `DEBT_MASTER_READ` — requires architect confirmation).
+- Existing `POST /allocations` and proposal-validation flows remain unchanged (`adapter-in/.../AllocationController.java`, `adapter-in/.../AllocationProposalController.java`).
+
 ##### 4. Data Model
-- Reuse `debt` table and uniqueness (`debtor_id`,`reference`). [source: adapter-out/src/main/java/com/pipelinepro/adapter/out/persistence/entity/DebtEntity.java]
+- Reuse `accounting_entry` with `source_aggregate_type=ALLOCATION` and `source_aggregate_id=allocationId`.
+
 ##### 5. Business Rules and Validations
-- BR-INTAKE-01/02 and FRQ-023/024/025.
+- Entry created only after successful allocation domain execution.
+
 ##### 6. Error Management
-- Unknown debtor -> not found/business rejection.
-- Invalid currency -> business validation error (`400`).
+- Entry insert failure must rollback allocation transaction.
+
 ##### 7. Edge Cases
-- Concurrent duplicate debt reference for same debtor.
-- Concurrent create with same debtor/reference must emit `DUPLICATE_DEBT_DETECTED` on conflict.
+- Idempotent allocation replay must not duplicate accounting entry.
+
 ##### 8. Dependencies
-- Debtor query port, debt write port, API mapping.
+- `adapter-out/.../JpaAllocationTransactionalWorker.java` (current transaction + idempotency lock path).
+
 ##### 9. Technical Acceptance Criteria
-- Create debt happy path, unknown debtor, invalid amount, invalid currency, duplicate reference (+ duplicate-debt audit emission).
+- Test: successful allocation -> one `PAYMENT_ALLOCATION` entry.
+- Test: replay same idempotency key -> no additional entry.
+
 ##### 10. UML Sequence Diagram
 ```plantuml
 @startuml
-actor IntakeClient
-participant DebtController
-participant DebtIntakeService
-participant DebtorRepository
-participant DebtRepository
-IntakeClient -> DebtController: POST /debts
-DebtController -> DebtIntakeService: createDebt(command)
-DebtIntakeService -> DebtorRepository: findById(debtorId)
-DebtIntakeService -> DebtRepository: save(debt)
-DebtController --> IntakeClient: 201
+actor Client
+participant "AllocationController" as C
+participant "AllocationExecutionApplicationService" as A
+participant "JpaAllocationTransactionalWorker" as W
+participant "AccountingEntryRepo" as R
+
+Client -> C: POST /allocations
+C -> A: executeAllocation(command)
+A -> W: executeAllocation(request)
+W -> W: lock payment/debt/proposal
+W -> W: persist allocation + update balances
+W -> R: insert PAYMENT_ALLOCATION
+W --> A: Allocation
+A --> C: AllocationResult (201)
 @enduml
 ```
 
-#### User Story [US-DI-004 — Debt Intake Does Not Trigger Allocation]
-##### 1. Context and Objective
-- Guarantee hard decoupling: intake is not an allocation trigger. [source: confluence:7117963683] [source: confluence:7116980899]
-##### 2. Detailed Functional Specifications
-- No call from debtor/debt intake services to matching/allocation use cases.
-- Keep payment-driven entrypoint unchanged.
-##### 3. API Contract
-- No additional API; behavioral constraint on `POST /debtors` and `POST /debts`.
-##### 4. Data Model
-- No balance mutation from intake operations.
-##### 5. Business Rules and Validations
-- BR-INTAKE-03/04 and FRQ-026.
-##### 6. Error Management
-- If downstream allocation interaction is accidentally invoked, fail-fast and audit as technical incident.
-##### 7. Edge Cases
-- Asynchronous listeners or side effects must not auto-enqueue payment matching.
-##### 8. Dependencies
-- Bean wiring + architectural tests for forbidden coupling.
-##### 9. Technical Acceptance Criteria
-- Characterization tests proving no allocation records created after intake commands.
-##### 10. UML Sequence Diagram
-```plantuml
-@startuml
-actor IntakeClient
-participant DebtIntakeService
-participant AllocationEngine
-IntakeClient -> DebtIntakeService: createDebt
-note right of DebtIntakeService
-No call allowed to AllocationEngine
-end note
-@enduml
-```
+#### User Story [US-ACC-004 — Consult Accounting Entries]
 
-#### User Story [US-DI-005 — Make New Debt Available for Future Allocation Flow]
 ##### 1. Context and Objective
-- Ensure eligible debt is visible to later payment matching flows. [source: confluence:7117963683]
-##### 2. Detailed Functional Specifications
-- Persist debt with status compatible with allocatable set.
-- Existing read endpoint remains source for debt lookup.
-##### 3. API Contract
-- Preserve `GET /debtors/{debtorId}/debts` and `GET /debts/{debtId}` behavior.
-##### 4. Data Model
-- Reuse `debt.status` and debtor relation indexes. [source: adapter-out/src/main/java/com/pipelinepro/adapter/out/persistence/entity/DebtEntity.java]
-##### 5. Business Rules and Validations
-- Eligible status required for later matching use.
-##### 6. Error Management
-- Non-eligible status remains stored but excluded from allocatable views where required.
-##### 7. Edge Cases
-- Debt created in non-allocatable status then transitioned later.
-##### 8. Dependencies
-- Existing debt query application service preserved. [source: application/src/main/java/com/pipelinepro/application/QueryApplicationService.java]
-##### 9. Technical Acceptance Criteria
-- Query tests confirm visibility rules for eligible vs non-eligible statuses.
-##### 10. UML Sequence Diagram
-```plantuml
-@startuml
-participant DebtIntakeService
-participant DebtRepository
-participant MatchingService
-DebtIntakeService -> DebtRepository: save(debt)
-MatchingService -> DebtRepository: findByDebtorId(...)
-@enduml
-```
+Expose read-only consultation (API + standalone screen) with filters `eventType`, `fromDate`, `toDate`; default order newest-first by `occurredAt DESC` (source: `confluence:7153680430`, `confluence:7153680541`).
 
-#### User Story [US-DI-006 — Audit Debtor and Debt Intake Lifecycle]
-##### 1. Context and Objective
-- Add mandatory intake audit coverage. [source: confluence:7117963683] [source: confluence:7116980899]
 ##### 2. Detailed Functional Specifications
-- Emit request/success/rejection/duplicate events for debtor/debt intake.
-- Mandatory duplicate events include both `DUPLICATE_DEBTOR_DETECTED` and `DUPLICATE_DEBT_DETECTED`.
+- New workspace/screen “Accounting Entries”.
+- Read-only list with empty-result behavior.
+- No create/update/delete from UI.
+
 ##### 3. API Contract
-- No dedicated API; audit side effects for intake commands.
+- **New endpoint:** `GET /accounting-entries`
+  - Query params: `eventType` (optional), `fromDate` (optional), `toDate` (optional)
+  - Response: list ordered by `occurredAt DESC`
+  - Security: role-restricted finance/audit access.
+
 ##### 4. Data Model
-- Reuse `audit_event` persistence and mapper/gateway paths. [source: adapter-out/src/main/java/com/pipelinepro/adapter/out/persistence/impl/JpaAuditEventGateway.java]
+- Query from `accounting_entry`; indexes needed on `occurred_at`, `event_type`, and optionally composite `(event_type, occurred_at)`.
+
 ##### 5. Business Rules and Validations
-- FRQ-027 mandatory auditability.
+- Read-only immutable trace.
+- Date range validity (`fromDate <= toDate`).
+
 ##### 6. Error Management
-- Audit persistence failures handled per fail-safe policy (to confirm with architect).
+- Invalid query parameters -> `400`.
+- Unauthorized access -> `403`.
+
 ##### 7. Edge Cases
-- Duplicate submissions must still be auditable.
+- Empty result returns `200` with empty list.
+- Large periods require pagination decision (open question).
+
 ##### 8. Dependencies
-- Existing `AuditEventGateway` integration from application services.
+- New controller/DTO/mapper in adapter-in.
+- New query port/service in application/domain.
+- New JPA repository in adapter-out.
+- UI updates in static assets (`bootstrap/src/main/resources/static/index.html`).
+
 ##### 9. Technical Acceptance Criteria
-- Tests verify audit event emission for success/rejection and both duplicate-event types.
+- Test: default ordering desc by occurredAt.
+- Test: eventType/date filters.
+- Test: empty list behavior.
+- Test: security denied for unauthorized role.
+
 ##### 10. UML Sequence Diagram
 ```plantuml
 @startuml
-participant IntakeService
-participant AuditGateway
-participant AuditStore
-IntakeService -> AuditGateway: publish(event)
-AuditGateway -> AuditStore: save
+actor User
+participant "AccountingEntryController" as C
+participant "AccountingEntryQueryUseCase" as U
+participant "AccountingEntryRepository" as R
+
+User -> C: GET /accounting-entries?eventType&fromDate&toDate
+C -> U: list(filter)
+U -> R: query ordered by occurredAt desc
+R --> U: entries
+U --> C: entries
+C --> User: 200 OK + list
 @enduml
 ```
 
@@ -272,43 +270,51 @@ AuditGateway -> AuditStore: save
 
 | Module | Why touched | Action (add file / edit existing for wiring) |
 |---|---|---|
-| domain | Add intake use cases/commands and outbound write ports | add files |
-| application | Add debtor/debt intake application services | add files |
-| adapter-in | Add `DebtorController`, request/response DTOs, mapper | add files |
-| adapter-out | Add write methods/repositories/mapper support for debtor/debt create | edit existing for wiring + add files |
-| bootstrap | Register new use-case beans | edit existing for wiring |
+| domain | New accounting aggregate and query/write ports | add file |
+| application | Orchestrate accounting write/query use cases | add file + minimal wiring edits |
+| adapter-out | Persist/query accounting entries in JPA | add file + worker wiring edits |
+| adapter-in | Expose read API `/accounting-entries` | add file |
+| bootstrap | Register new beans | edit existing for wiring |
+| static frontend | Add standalone read screen/navigation | add file + minimal link edit |
 
 ### 3.2 Classes and files
 
 | Path | Action | What is added |
 |---|---|---|
-| `adapter-in/src/main/java/com/pipelinepro/adapter/in/web/v1/DebtController.java` | edit existing for wiring | optional create endpoints or keep read-only and create new `DebtorController` |
-| `application/src/main/java/com/pipelinepro/application/QueryApplicationService.java` | preserve | read APIs unchanged for debt discoverability |
-| `domain/src/main/java/com/pipelinepro/domain/port/out/DebtorRepository.java` | edit existing for wiring | `save(...)` and duplicate-check operations |
-| `adapter-out/src/main/java/com/pipelinepro/adapter/out/persistence/impl/JpaDebtorRepository.java` | edit existing for wiring | implement create/save/duplicate checks |
-| `adapter-out/src/main/java/com/pipelinepro/adapter/out/persistence/repository/SpringDataDebtorRepository.java` | edit existing for wiring | query helpers for duplicate policy |
-| `bootstrap/src/main/java/com/pipelinepro/bootstrap/config/ApplicationServiceConfig.java` | edit existing for wiring | intake use-case bean registration |
+| `application/src/main/java/com/pipelinepro/application/PaymentIntakeApplicationService.java` | edit existing for wiring | call accounting-entry creation on successful payment intake |
+| `application/src/main/java/com/pipelinepro/application/CreateDebtIntakeApplicationService.java` | edit existing for wiring (or delegate to worker) | trigger debt-arrival accounting entry within success flow |
+| `adapter-out/src/main/java/com/pipelinepro/adapter/out/persistence/impl/JpaAllocationTransactionalWorker.java` | edit existing for wiring | persist `PAYMENT_ALLOCATION` accounting entry in same transaction |
+| `bootstrap/src/main/java/com/pipelinepro/bootstrap/config/ApplicationServiceConfig.java` | edit existing for wiring | beans for accounting write/query services |
+| `adapter-in/src/main/java/com/pipelinepro/adapter/in/web/v1/PaymentController.java` | preserve | no contract changes |
+| `adapter-in/src/main/java/com/pipelinepro/adapter/in/web/v1/DebtController.java` | preserve | no contract changes |
+| `adapter-in/src/main/java/com/pipelinepro/adapter/in/web/v1/AllocationController.java` | preserve | no contract changes |
+| `bootstrap/src/main/resources/static/index.html` | edit existing for wiring | add link to accounting entries screen |
 
 ### 3.3 Endpoints
 
 | Existing controller path | New endpoints added | Notes |
 |---|---|---|
-| `/debtors/{debtorId}/debts`, `/debts/{debtId}` | `POST /debtors`, `GET /debtors/{id}`, `GET /debtors`, `POST /debts` | preserve existing debt GET contracts |
-| `/payments/**`, `/allocation-proposals/**`, `/allocations/**` | none | preserved contract |
+| `adapter-in/.../PaymentController.java` (`/payments`) | none | preserve contract |
+| `adapter-in/.../DebtController.java` (`/debts`) | none | preserve contract |
+| `adapter-in/.../AllocationController.java` (`/allocations`) | none | preserve contract |
+| new controller | `GET /accounting-entries` | read-only consultation with filters |
 
 ### 3.4 Persistence schema
 
 | Existing table | New columns / indexes | Additive? (yes / no — if no, document the decision) |
 |---|---|---|
-| `debtor` | none required initially (reuse existing columns/constraints) | yes |
-| `debt` | none required initially (reuse uniqueness/indexes) | yes |
-| `audit_event` | no schema change | yes |
+| `payment` | none | yes |
+| `debt` | none | yes |
+| `payment_allocation` | none | yes |
+| `audit_event` | none | yes |
+| **new `accounting_entry` table** | indexes on `occurred_at`, `event_type`, optional `(event_type, occurred_at)` | yes |
 
 ### 3.5 Configuration entries
 
 | Configuration file | New entries | Rationale |
 |---|---|---|
-| `bootstrap/src/main/resources/application.yml` | optional duplicate-policy toggles | policy-controlled intake behavior |
+| `bootstrap/src/main/resources/application.yml` | optional pagination defaults for accounting listing | control payload size |
+| security annotations/config | finance/audit authority for listing endpoint | role restriction requested by SAD addendum (`confluence:7153680541`) |
 
 ## 4. Preserved contract
 
@@ -316,58 +322,64 @@ AuditGateway -> AuditStore: save
 
 | Method | Path | Request shape | Response shape | Status codes |
 |---|---|---|---|---|
-| POST | `/payments` | receive payment payload | payment summary | 201/400/409 |
-| GET | `/payments/{paymentId}` | path id | payment details | 200/404 |
-| GET | `/payments/{paymentId}/proposals` | path id | proposal list | 200/404 |
-| POST | `/payments/{paymentId}/match` and subpaths | path id | match result/proposal result | 200/202/4xx |
-| GET | `/allocation-proposals/{proposalId}` | path id | proposal detail | 200/404 |
-| POST | `/allocation-proposals/{proposalId}/validate|reject|select-debt|mark-unmatched|request-investigation` | command payload | proposal/allocation state | 200/4xx |
-| POST | `/allocations` | execute allocation payload | allocation result | 201/4xx |
-| GET | `/allocations/{allocationId}` | path id | allocation detail | 200/404 |
-| GET | `/debtors/{debtorId}/debts` | path + optional status | debt list | 200/404 |
-| GET | `/debts/{debtId}` | path id | debt detail | 200/404 |
+| POST | `/payments` | unchanged (`ReceivePaymentRequest`) | unchanged (`PaymentResponse`) | unchanged |
+| GET | `/payments/{paymentId}` | unchanged | unchanged (`PaymentDetailsResponse`) | unchanged |
+| GET | `/payments/{paymentId}/proposals` | unchanged | unchanged | unchanged |
+| POST | `/payments/{paymentId}/match` (+ subpaths) | unchanged | unchanged | unchanged |
+| POST | `/debts` | unchanged + existing required headers | unchanged (`DebtResponse`) | unchanged |
+| GET | `/debts/{debtId}` | unchanged | unchanged | unchanged |
+| GET | `/debtors/{debtorId}/debts` | unchanged | unchanged | unchanged |
+| POST | `/allocations` | unchanged | unchanged | unchanged |
+| GET | `/allocations/{allocationId}` | unchanged | unchanged | unchanged |
+| allocation-proposal lifecycle endpoints | unchanged | unchanged | unchanged | unchanged |
 
 ### 4.2 Preserved persistence schema entries
 
 | Entry | Reason it must be preserved |
 |---|---|
-| `payment.uk_payment_bank_transaction_reference` | idempotent payment intake guarantee |
-| `debtor.uk_debtor_national_number_hash` and `uk_debtor_enterprise_number` | duplicate prevention + identifier integrity |
-| `debt.uk_debt_debtor_reference` | no duplicate debt reference for same debtor |
-| `payment.version`, `debt.version` | optimistic concurrency control |
+| `payment.uk_payment_bank_transaction_reference` | existing idempotency contract |
+| `payment_allocation.uk_payment_allocation_idempotency_key` | replay safety |
+| `payment_allocation.uk_payment_allocation_payment_debt_command` | duplicate prevention |
+| `debt.uk_debt_reference_global` | debt uniqueness contract |
+| optimistic versions on `payment`, `debt`, `allocation_proposal` | concurrency guarantees |
 
 ### 4.3 Preserved observable behaviors
 
 | Behavior | Reason it must be preserved |
 |---|---|
-| Strict matching order structured -> identifier -> name | core business safety rule |
-| Automatic allocation only for valid/unambiguous structured communication | baseline contract |
-| Identifier/name matching requires manual proposal validation | baseline risk-control rule |
-| Intake must not trigger allocation | new/explicit v2 boundary rule |
+| Structured communication is the only automatic allocation path | baseline rule from SAD/BA (`confluence:7091912737`, `confluence:7153680541`) |
+| Identifier/name matching remain proposal-only | non-regression functional contract |
+| Allocation remains atomic with lock-based worker | correctness under concurrency (`adapter-out/.../JpaAllocationTransactionalWorker.java`) |
+| Existing audit events remain emitted | compliance and trace continuity |
 
 ## 5. Migration considerations
 
-- Data migration: **no** (reuse existing schema structures).
-- API versioning: **no** (additive endpoints only).
-- Frontend impact: **yes** (new intake screens/forms if exposed in UI).
+- Data migration: **yes (additive schema only)**
+- API versioning: **no** (new endpoint additive)
+- Frontend impact: **yes** (new read-only screen + navigation entry)
 
 Details:
-- Backward-compatible additive extension; no destructive schema/API changes required.
-- NFR additions from SAD v2 to enforce in implementation and tests: (1) intake idempotency where applicable, (2) deterministic/traceable intake validations, (3) intake throughput and observability independently monitorable from allocation workload. [source: confluence:7116980899]
+- Additive DB migration introducing `accounting_entry` with non-breaking indexes.
+- No destructive changes to existing tables/endpoints.
+- Backfill is not required by current scope; entries start from go-live forward.
 
 ## 6. Open questions
 
-- What exact duplicate business keys (person vs enterprise) are mandatory for debtor create policy? [source: confluence:7117963683]
-- Must duplicate candidates be blocked always, or routed to review workflow? [source: confluence:7117963683]
-- Should intake audit failure block create operations (fail-safe) or allow eventual retry? [source: confluence:7116980899]
-- Which initial debt statuses are considered allocatable by default in production policy? [source: confluence:7117963683]
+- Should accounting-entry creation be **strictly blocking** (rollback business transaction on failure) for all three events? (architect)
+- For `PAYMENT_ARRIVAL`, should `occurredAt` use bank execution/value date or technical reception timestamp? (business/architect)
+- Do we require pagination on `GET /accounting-entries` now, or can MVP return bounded list only? (business/architect)
+- Which exact authority names should protect accounting consultation (`FINANCE_READ`, `AUDIT_READ`, etc.)? (security)
+- Is export (CSV/Excel) explicitly out of scope for this increment? (business)
 
 ## 7. Readiness
 
 - Readiness level: **Ready with minor clarifications**
-- Main blockers: duplicate-rule policy and audit-failure policy decisions.
+- Main blockers:
+  - final authority naming and access policy for accounting consultation
+  - timestamp policy for `occurredAt` on payment-arrival event
+  - explicit transactional failure policy for accounting side-effect failures
 - Recommended next actions:
-  1. Confirm duplicate policy matrix and conflict handling.
-  2. Confirm intake authorization roles (temporary proposed permission names: `DEBTOR_MASTER_WRITE`, `DEBTOR_MASTER_READ`, `DEBT_MASTER_WRITE`, `DEBT_MASTER_READ`).
-  3. Freeze intake API payload contracts.
-- Mode-switch recommendation: **Confirm extension-business**.
+  1. validate open questions with architect/security/business
+  2. confirm additive migration script shape
+  3. proceed to `/plan extension-business with-sad`
+- Mode-switch recommendation: **Confirm extension-business**

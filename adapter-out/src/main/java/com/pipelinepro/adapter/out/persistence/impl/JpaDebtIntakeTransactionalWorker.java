@@ -3,12 +3,18 @@ package com.pipelinepro.adapter.out.persistence.impl;
 import com.pipelinepro.adapter.out.persistence.entity.IntakeRequestEntity;
 import com.pipelinepro.adapter.out.persistence.entity.DebtEntity;
 import com.pipelinepro.adapter.out.persistence.mapper.DebtEntityMapper;
+import com.pipelinepro.adapter.out.persistence.mapper.AccountingEntryEntityMapper;
 import com.pipelinepro.adapter.out.persistence.repository.SpringDataDebtRepository;
+import com.pipelinepro.adapter.out.persistence.repository.SpringDataAccountingEntryRepository;
 import com.pipelinepro.adapter.out.persistence.repository.SpringDataDebtorRepository;
 import com.pipelinepro.adapter.out.persistence.repository.SpringDataIntakeRequestRepository;
+import com.pipelinepro.domain.AccountingEntry;
+import com.pipelinepro.domain.AccountingEventType;
 import com.pipelinepro.domain.Debt;
 import com.pipelinepro.domain.DebtStatus;
+import com.pipelinepro.domain.SourceAggregateType;
 import jakarta.persistence.EntityManager;
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
@@ -36,20 +42,26 @@ public class JpaDebtIntakeTransactionalWorker {
 
     private final SpringDataIntakeRequestRepository springDataIntakeRequestRepository;
     private final SpringDataDebtRepository springDataDebtRepository;
+    private final SpringDataAccountingEntryRepository springDataAccountingEntryRepository;
     private final SpringDataDebtorRepository springDataDebtorRepository;
     private final DebtEntityMapper debtEntityMapper;
+    private final AccountingEntryEntityMapper accountingEntryEntityMapper;
     private final EntityManager entityManager;
 
     public JpaDebtIntakeTransactionalWorker(
             SpringDataIntakeRequestRepository springDataIntakeRequestRepository,
             SpringDataDebtRepository springDataDebtRepository,
+            SpringDataAccountingEntryRepository springDataAccountingEntryRepository,
             SpringDataDebtorRepository springDataDebtorRepository,
             DebtEntityMapper debtEntityMapper,
+            AccountingEntryEntityMapper accountingEntryEntityMapper,
             EntityManager entityManager) {
         this.springDataIntakeRequestRepository = springDataIntakeRequestRepository;
         this.springDataDebtRepository = springDataDebtRepository;
+        this.springDataAccountingEntryRepository = springDataAccountingEntryRepository;
         this.springDataDebtorRepository = springDataDebtorRepository;
         this.debtEntityMapper = debtEntityMapper;
+        this.accountingEntryEntityMapper = accountingEntryEntityMapper;
         this.entityManager = entityManager;
     }
 
@@ -115,6 +127,8 @@ public class JpaDebtIntakeTransactionalWorker {
         intakeRequest.setStatus(STATUS_CREATED);
         intakeRequest.setUpdatedAt(now);
         springDataIntakeRequestRepository.saveAndFlush(intakeRequest);
+
+        appendDebtArrivalAccountingEntry(savedDebt.getId(), originalAmount, currency, now);
         return debtEntityMapper.toDomain(savedDebt);
     }
 
@@ -171,6 +185,21 @@ public class JpaDebtIntakeTransactionalWorker {
             }
             throw exception;
         }
+    }
+
+    private void appendDebtArrivalAccountingEntry(UUID debtId, BigDecimal amount, String currency, Instant now) {
+        AccountingEntry accountingEntry = AccountingEntry.append(
+                UUID.randomUUID(),
+                AccountingEventType.DEBT_ARRIVAL,
+                SourceAggregateType.DEBT,
+                debtId,
+                amount,
+                currency,
+                now,
+                now);
+        var accountingEntryEntity = accountingEntryEntityMapper.toEntity(accountingEntry);
+        accountingEntryEntity.setId(null);
+        springDataAccountingEntryRepository.saveAndFlush(accountingEntryEntity);
     }
 
     private IntakeRequestEntity assertDebtOperation(IntakeRequestEntity intakeRequestEntity) {

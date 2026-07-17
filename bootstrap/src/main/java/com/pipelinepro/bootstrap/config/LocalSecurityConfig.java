@@ -27,7 +27,8 @@ public class LocalSecurityConfig {
                         IntakeSecurityConfig.VIEW_DEBTOR_MASTER_DATA,
                         IntakeSecurityConfig.CREATE_DEBTOR,
                         IntakeSecurityConfig.VIEW_DEBT_MASTER_DATA,
-                        IntakeSecurityConfig.CREATE_DEBT
+                        IntakeSecurityConfig.CREATE_DEBT,
+                        IntakeSecurityConfig.ACCOUNTING_READ
                 )
                 .build();
 

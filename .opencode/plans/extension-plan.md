@@ -2,127 +2,152 @@
 
 **Trigger mode:** extension-business
 **SAD check:** with-sad
-**Date:** 2026-06-30
+**Date:** 2026-07-10
 **Author:** sad-architect-reviewer
 
 ## 1. Scope
 
-Reference: `.opencode/plans/extension-analysis.md` (authoritative source of truth for this extension cycle).
+Reference: `.opencode/plans/extension-analysis.md`.
 
-This extension adds debtor/debt intake capabilities while preserving existing payment-allocation behavior. It also locks user-confirmed policy decisions:
-- Debtor ID: UUID v4 canonical lowercase, server-generated, immutable.
-- Debt reference: globally unique across all debtors.
-- Mandatory intake audit lifecycle: `*_REQUESTED`, `*_CREATED`, `*_REJECTED`.
-- Allocatable debt statuses: `OPEN`, `PARTIALLY_PAID` only.
-- Allocation cancellation: out of scope.
-- Intake controls: required idempotency key + required correlationId + mandatory metrics/logs/traces + SLO alerts.
-- Permissions: `VIEW_DEBTOR_MASTER_DATA`, `CREATE_DEBTOR`, `VIEW_DEBT_MASTER_DATA`, `CREATE_DEBT`.
+This extension adds a minimal accounting trace capability without changing existing allocation, matching, proposal, and intake contracts.
 
-Policy resolution for previously open point:
-- Audit persistence behavior for intake writes is **fail-safe blocking**: if mandatory audit event persistence fails, the intake transaction is rolled back and the API returns technical failure (no partial create).
+Summary:
+- **New module artifacts** across all hexagonal layers for `AccountingEntry` write/read capabilities.
+- **New aggregate/table:** `accounting_entry` (append-only).
+- **New endpoint:** `GET /accounting-entries` (read-only, bounded list for MVP).
+- **New frontend page:** accounting entries consultation page + navigation link.
+- **Existing files touched only for wiring/side-effects** on successful `POST /debts`, `POST /payments`, and `POST /allocations` flows.
 
-Policy override note:
-- Earlier analysis acceptance criteria mentioning dedicated duplicate events (`DUPLICATE_*`) are superseded in this cycle by the confirmed minimal lifecycle policy; duplicate outcomes are represented as `*_REJECTED` with reason code `DUPLICATE`.
-
-New/extended artifacts:
-- New endpoints: `POST /debtors`, `GET /debtors/{id}`, `GET /debtors`, `POST /debts`.
-- New intake application/domain flows for debtor and debt creation.
-- Minimal edits to existing files for repository wiring, security mapping, and bean registration.
-- Schema deltas: intake idempotency persistence + debt reference global uniqueness rollout.
+Locked scope decisions for this increment:
+- Accounting-entry write failure is **strictly blocking** with **global rollback**.
+- `PAYMENT_ARRIVAL.occurredAt` source is **bank date**.
+- Pagination for `GET /accounting-entries` is **not required for MVP** (bounded list).
+- Authorization for accounting read access: **`ACCOUNTING_READ`**.
+- CSV/Excel export is **explicitly out of scope**.
 
 ## 2. Preserved contract
+
+(Copied from extension-analysis.md, synchronized.)
 
 ### 2.1 Preserved public APIs
 
 | Method | Path | Request shape | Response shape | Status codes |
 |---|---|---|---|---|
-| POST | `/payments` | receive payment payload | payment summary | 201/400/409 |
-| GET | `/payments/{paymentId}` | path id | payment details | 200/404 |
-| GET | `/payments/{paymentId}/proposals` | path id | proposal list | 200/404 |
-| POST | `/payments/{paymentId}/match` and subpaths | path id | match/proposal result | 200/202/4xx |
-| GET | `/allocation-proposals/{proposalId}` | path id | proposal detail | 200/404 |
-| POST | `/allocation-proposals/{proposalId}/validate\|reject\|select-debt\|mark-unmatched\|request-investigation` | command payload | proposal/allocation state | 200/4xx |
-| POST | `/allocations` | execute allocation payload | allocation result | 201/4xx |
-| GET | `/allocations/{allocationId}` | path id | allocation detail | 200/404 |
-| GET | `/debtors/{debtorId}/debts` | path + optional status | debt list | 200/404 |
-| GET | `/debts/{debtId}` | path id | debt detail | 200/404 |
+| POST | `/payments` | unchanged (`ReceivePaymentRequest`) | unchanged (`PaymentResponse`) | unchanged |
+| GET | `/payments/{paymentId}` | unchanged | unchanged (`PaymentDetailsResponse`) | unchanged |
+| GET | `/payments/{paymentId}/proposals` | unchanged | unchanged | unchanged |
+| POST | `/payments/{paymentId}/match` (+ subpaths) | unchanged | unchanged | unchanged |
+| POST | `/debts` | unchanged + existing required headers | unchanged (`DebtResponse`) | unchanged |
+| GET | `/debts/{debtId}` | unchanged | unchanged | unchanged |
+| GET | `/debtors/{debtorId}/debts` | unchanged | unchanged | unchanged |
+| POST | `/allocations` | unchanged | unchanged | unchanged |
+| GET | `/allocations/{allocationId}` | unchanged | unchanged | unchanged |
+| allocation-proposal lifecycle endpoints | unchanged | unchanged | unchanged | unchanged |
 
 ### 2.2 Preserved persistence schema entries
 
 | Entry | Reason |
 |---|---|
-| `payment.uk_payment_bank_transaction_reference` | Preserve payment intake idempotency guarantee |
-| `debtor.uk_debtor_national_number_hash`, `debtor.uk_debtor_enterprise_number` | Preserve debtor duplicate prevention |
-| `payment.version`, `debt.version` | Preserve optimistic concurrency semantics |
-
-Approved contract evolution (explicit):
-- `debt.uk_debt_debtor_reference` is superseded by a global unique key on `debt.reference` (approved business policy decision for this cycle).
+| `payment.uk_payment_bank_transaction_reference` | existing idempotency contract |
+| `payment_allocation.uk_payment_allocation_idempotency_key` | replay safety |
+| `payment_allocation.uk_payment_allocation_payment_debt_command` | duplicate prevention |
+| `debt.uk_debt_reference_global` | debt uniqueness contract |
+| optimistic versions on `payment`, `debt`, `allocation_proposal` | concurrency guarantees |
 
 ### 2.3 Preserved observable behaviors
 
 | Behavior | Reason |
 |---|---|
-| Strict matching order: structured -> identifier -> name | Core allocation safety contract |
-| Automatic allocation only for valid/unambiguous structured communication | Core risk-control contract |
-| Identifier/name matching requires manual proposal validation | Core governance contract |
-| Intake must not trigger allocation | Explicit SAD v2 boundary and extension invariant |
+| Structured communication is the only automatic allocation path | baseline SAD rule |
+| Identifier/name matching remain proposal-only | non-regression functional contract |
+| Allocation remains atomic with lock-based worker | concurrency/correctness contract |
+| Existing audit events remain emitted | compliance and trace continuity |
 
 ## 3. Data model after extension
 
 ```plantuml
 @startuml
-hide circle
-skinparam linetype ortho
+hide methods
+hide stereotypes
 
-entity Debtor {
-  * id : UUID <<UUIDv4 lowercase, immutable>>
+entity "debtor" as debtor {
+  * id : uuid
   --
-  type : DebtorType
-  displayName : String
-  nationalNumberHash : String?
-  enterpriseNumber : String?
-  active : Boolean
-  createdAt : Instant
+  debtor_type : varchar
+  status : varchar
 }
 
-entity Debt {
-  * id : UUID
+entity "debt" as debt {
+  * id : uuid
   --
-  debtorId : UUID <<FK>>
-  reference : String <<UK_GLOBAL>>  ' NEW: global uniqueness policy
-  originalAmount : Decimal
-  remainingAmount : Decimal
-  currency : String
-  status : DebtStatus
-  version : Long
-  createdAt : Instant
-  updatedAt : Instant
+  debtor_id : uuid
+  debt_reference : varchar <<UK>>
+  structured_communication : varchar
+  original_amount : decimal
+  remaining_amount : decimal
+  currency : varchar
+  status : varchar
+  version : bigint
 }
 
-entity IntakeRequest {
-  * id : UUID
+entity "payment" as payment {
+  * id : uuid
   --
-  idempotencyKey : String <<UK>>    ' NEW: required for intake writes
-  operation : String                ' NEW: CREATE_DEBTOR / CREATE_DEBT
-  resourceId : UUID?
-  correlationId : String            ' NEW: required trace correlation
-  status : String
-  createdAt : Instant
-  updatedAt : Instant
+  bank_transaction_reference : varchar <<UK>>
+  amount : decimal
+  remaining_amount : decimal
+  currency : varchar
+  execution_date : date
+  value_date : date
+  status : varchar
+  version : bigint
 }
 
-entity AuditEvent {
-  * id : UUID
+entity "payment_allocation" as allocation {
+  * id : uuid
   --
-  aggregateType : String
-  aggregateId : UUID
-  eventType : String
-  payloadJson : CLOB
-  correlationId : String?           ' NEW optional column for traceability
-  createdAt : Instant
+  payment_id : uuid
+  debt_id : uuid
+  amount : decimal
+  allocation_method : varchar
+  status : varchar
+  idempotency_key : varchar <<UK>>
 }
 
-Debtor ||--o{ Debt
+entity "allocation_proposal" as proposal {
+  * id : uuid
+  --
+  payment_id : uuid
+  status : varchar
+  version : bigint
+}
+
+entity "audit_event" as audit_event {
+  * id : uuid
+  --
+  type : varchar
+  payment_id : uuid
+  timestamp : timestamp
+}
+
+entity "accounting_entry" as accounting_entry {
+  * id : uuid
+  --
+  event_type : varchar
+  source_aggregate_type : varchar
+  source_aggregate_id : uuid
+  amount : decimal
+  currency : varchar
+  occurred_at : timestamp
+  created_at : timestamp
+}
+' NEW in extension: append-only accounting trace aggregate/table
+
+debtor ||--o{ debt
+payment ||--o{ allocation
+debt ||--o{ allocation
+payment ||--o{ proposal
+
 @enduml
 ```
 
@@ -130,81 +155,113 @@ Debtor ||--o{ Debt
 
 | Method | Path | Request | Response | Status codes | Label (new / extended) |
 |---|---|---|---|---|---|
-| POST | `/debtors` | CreateDebtorRequest + required headers `Idempotency-Key`, `X-Correlation-Id` | DebtorResponse | 201, 400, 401, 403, 409 | new |
-| GET | `/debtors/{id}` | path id | DebtorResponse | 200, 401, 403, 404 | new |
-| GET | `/debtors` | search query | DebtorListResponse | 200, 401, 403 | new |
-| POST | `/debts` | CreateDebtRequest + required headers `Idempotency-Key`, `X-Correlation-Id` | DebtResponse | 201, 400, 401, 403, 404, 409 | new |
+| GET | `/accounting-entries` | Query params: `eventType?`, `fromDate?`, `toDate?` (`fromDate <= toDate`) | `200` list of accounting entries sorted by `occurredAt DESC` (bounded list, no MVP pagination) | `200`, `400`, `403` | new |
 
-Authorization mapping:
-- Debtor read: `VIEW_DEBTOR_MASTER_DATA`
-- Debtor create: `CREATE_DEBTOR`
-- Debt read: `VIEW_DEBT_MASTER_DATA`
-- Debt create: `CREATE_DEBT`
+Notes:
+- Existing write APIs are unchanged externally; they gain internal side-effects only:
+  - `POST /debts` => create `DEBT_ARRIVAL`
+  - `POST /payments` => create `PAYMENT_ARRIVAL` (occurredAt = bank date)
+  - `POST /allocations` => create `PAYMENT_ALLOCATION`
 
 ## 5. Locking strategy for new flows
 
 | Operation | Lock type | Implementation | Rationale |
 |---|---|---|---|
-| Debtor intake idempotency | Unique-key based optimistic | `IntakeRequest.idempotency_key` unique + replay handling in adapter-out worker | Retry-safe create without coarse locks |
-| Debtor duplicate prevention | Unique-key based optimistic | Existing debtor unique constraints + conflict mapping to 409 | Race-safe duplicate blocking |
-| Debt intake idempotency | Unique-key based optimistic | Same `IntakeRequest` mechanism | Deterministic retry behavior |
-| Debt reference global uniqueness | Unique-key based optimistic | DB unique key on `debt.reference` + conflict mapping to 409 | Enforce approved global reference policy under concurrency |
-| Allocation flows | Unchanged | Existing pessimistic/optimistic strategy preserved | Non-regression of baseline behavior |
-
-Transaction rule: `@Transactional` only in adapter-out transactional workers.
+| Create `DEBT_ARRIVAL` accounting entry after debt creation | Same transaction as debt intake; rely on existing uniqueness/transaction semantics | Append accounting insert in debt transactional worker/service success path; on insert failure throw and rollback | Strict blocking policy guarantees no debt success without accounting trace |
+| Create `PAYMENT_ARRIVAL` accounting entry after payment reception | Same transaction as payment intake; uniqueness via existing payment idempotency | Append accounting insert after payment persistence success; on failure rollback | Preserves exactly-once per successful payment while preventing orphan payment success |
+| Create `PAYMENT_ALLOCATION` accounting entry after allocation execution | Reuse existing pessimistic locking path for allocation (`PESSIMISTIC_WRITE`) + same transaction insert | Insert accounting entry inside `JpaAllocationTransactionalWorker` after successful allocation state changes; rollback on failure | Maintains concurrency safety and strict consistency with allocation result |
+| Read accounting entries (`GET /accounting-entries`) | No write lock; read path with indexed filtering | JPA query using indexes on `occurred_at`, `event_type` (optional composite `(event_type, occurred_at)`) | Efficient read-only consultation without contention |
 
 ## 6. Sequence diagrams (PlantUML)
 
-### 6.1 Debtor intake write flow
+For each new write flow, locking/transaction boundary is explicit and accounting write is strictly blocking.
+
+### 6.1 Debt arrival -> DEBT_ARRIVAL
 
 ```plantuml
 @startuml
 actor Client
-participant DebtorController
-participant DebtorIntakeService
-participant DebtorIntakeTxWorker as "DebtorIntakeTxWorker (@Transactional)"
-database DB
+participant "DebtController" as C
+participant "CreateDebtIntakeApplicationService" as A
+participant "JpaDebtIntakeTransactionalWorker" as W
+participant "AccountingEntryRepository" as R
 
-Client -> DebtorController: POST /debtors\nIdempotency-Key, X-Correlation-Id
-DebtorController -> DebtorIntakeService: createDebtor(command, metadata)
-DebtorIntakeService -> DebtorIntakeTxWorker: create(command, metadata)
-DebtorIntakeTxWorker -> DB: INSERT intake_request (UK idempotency_key)
-DebtorIntakeTxWorker -> DB: INSERT debtor
-  DebtorIntakeTxWorker -> DB: INSERT audit_event(DEBTOR_CREATION_REQUESTED)
-  DebtorIntakeTxWorker -> DB: INSERT audit_event(DEBTOR_CREATED)
-alt validation/duplicate rejected
-  DebtorIntakeTxWorker -> DB: INSERT audit_event(DEBTOR_REJECTED{reason=DUPLICATE|VALIDATION|TECHNICAL})
+Client -> C: POST /debts
+C -> A: createDebt(command)
+A -> W: createDebtTransactional(...)
+activate W
+W -> W: persist Debt
+W -> R: insert(DEBT_ARRIVAL)
+R --> W: ok
+W --> A: Debt created
+deactivate W
+A --> C: 201 DebtResponse
+
+alt accounting insert fails
+  R --> W: error
+  W -> W: throw exception
+  W -> W: rollback global transaction
+  A --> C: error response
 end
-DebtorIntakeTxWorker --> DebtorIntakeService: result
-DebtorIntakeService --> DebtorController: result
-DebtorController --> Client: 201/4xx
 @enduml
 ```
 
-### 6.2 Debt intake write flow
+### 6.2 Payment arrival -> PAYMENT_ARRIVAL (occurredAt = bank date)
 
 ```plantuml
 @startuml
 actor Client
-participant DebtController
-participant DebtIntakeService
-participant DebtIntakeTxWorker as "DebtIntakeTxWorker (@Transactional)"
-database DB
+participant "PaymentController" as C
+participant "PaymentIntakeApplicationService" as A
+participant "PaymentTransactionalWorker" as W
+participant "AccountingEntryRepository" as R
 
-Client -> DebtController: POST /debts\nIdempotency-Key, X-Correlation-Id
-DebtController -> DebtIntakeService: createDebt(command, metadata)
-DebtIntakeService -> DebtIntakeTxWorker: create(command, metadata)
-DebtIntakeTxWorker -> DB: INSERT intake_request (UK idempotency_key)
-DebtIntakeTxWorker -> DB: SELECT debtor by id
-DebtIntakeTxWorker -> DB: INSERT debt (UK_GLOBAL reference)
-DebtIntakeTxWorker -> DB: INSERT audit_event(DEBT_CREATION_REQUESTED)
-DebtIntakeTxWorker -> DB: INSERT audit_event(DEBT_CREATED)
-alt validation/not-found/duplicate rejected
-  DebtIntakeTxWorker -> DB: INSERT audit_event(DEBT_REJECTED{reason=NOT_FOUND|DUPLICATE|VALIDATION|TECHNICAL})
+Client -> C: POST /payments
+C -> A: receivePayment(command)
+A -> W: receiveTransactional(...)
+activate W
+W -> W: persist Payment
+W -> R: insert(PAYMENT_ARRIVAL, occurredAt=bankDate)
+R --> W: ok
+W --> A: Payment created
+deactivate W
+A --> C: 201 PaymentResponse
+
+alt accounting insert fails
+  R --> W: error
+  W -> W: rollback global transaction
+  A --> C: error response
 end
-DebtIntakeTxWorker --> DebtIntakeService: result
-DebtIntakeService --> DebtController: result
-DebtController --> Client: 201/4xx
+@enduml
+```
+
+### 6.3 Allocation execution -> PAYMENT_ALLOCATION
+
+```plantuml
+@startuml
+actor Client
+participant "AllocationController" as C
+participant "AllocationExecutionApplicationService" as A
+participant "JpaAllocationTransactionalWorker" as W
+participant "AccountingEntryRepository" as R
+
+Client -> C: POST /allocations
+C -> A: executeAllocation(command)
+A -> W: executeTransactional(...)
+activate W
+W -> W: lock payment/debt/proposal (PESSIMISTIC_WRITE)
+W -> W: persist allocation + update balances
+W -> R: insert(PAYMENT_ALLOCATION)
+R --> W: ok
+W --> A: Allocation result
+deactivate W
+A --> C: 201 AllocationResponse
+
+alt accounting insert fails
+  R --> W: error
+  W -> W: rollback global transaction
+  A --> C: error response
+end
 @enduml
 ```
 
@@ -212,60 +269,61 @@ DebtController --> Client: 201/4xx
 
 | Page | File | Status (new / extended) | Content |
 |---|---|---|---|
-| Debtor intake | `bootstrap/src/main/resources/static/debtors/create.html` | new | Debtor form with idempotency/correlation hints and validation errors |
-| Debtor list/search | `bootstrap/src/main/resources/static/debtors/list.html` | new | Search/list debtor master data |
-| Debt intake | `bootstrap/src/main/resources/static/debts/create.html` | new | Debt form with debtor selector and allowed opening statuses |
-| Main navigation | existing shell page | extended | Add links to Debtor/Debt master-data pages only |
+| Accounting Entries | `bootstrap/src/main/resources/static/accounting-entries.html` | new | Read-only table: event type, source aggregate, source id, amount, currency, occurredAt; filters by event type and date range; newest-first display |
+| Accounting Entries JS | `bootstrap/src/main/resources/static/js/accounting-entries.js` | new | Calls `GET /accounting-entries`, renders bounded list, handles empty state and filter validation |
+| Main navigation | `bootstrap/src/main/resources/static/index.html` | extended | Add link/entry to Accounting Entries page |
+
+Constraint: CSV/Excel export is out of scope for this increment.
 
 ## 8. Implementation steps
 
 | # | Layer | Step description | New files only? | Edits-existing (paths) | Subagent | How to verify | Non-regression check |
 |---|---|---|---|---|---|---|---|
-| 1 | domain | Add debtor/debt intake commands, inbound ports, outbound ports, and domain validation policies (UUID policy, allocatable statuses policy) | yes | — | domain-engineer | `mvn -q test -pl domain` | Run full existing domain tests |
-| 2 | adapter-out | Add intake idempotency persistence (`IntakeRequest` entity/repo/gateway) and transactional workers for debtor/debt create | mostly yes | wiring in existing persistence config/repositories | persistence-engineer | `mvn -q test -pl adapter-out -Dtest='*Intake*Test,*Repository*Test'` | Existing adapter-out tests remain green |
-| 3 | adapter-out | Implement global debt reference uniqueness migration and conflict mapping | no | `DebtEntity` + migration scripts + repository checks | persistence-engineer | `mvn -q test -pl adapter-out -Dtest='*Debt*Constraint*Test,*Concurrency*Test'` | Existing debt query/allocation persistence tests green |
-| 4 | application | Add intake application services orchestrating ports and lifecycle audit emission (`*_REQUESTED/*_CREATED/*_REJECTED`) with duplicate mapped to `*_REJECTED` reason code | yes | — | domain-engineer | `mvn -q test -pl application` | Existing allocation service tests green |
-| 5 | adapter-in | Add debtor/debt write endpoints + DTOs + header validation (`Idempotency-Key`, `X-Correlation-Id`) + permission checks | yes | optional extension of existing debt controller wiring | web-engineer | `mvn -q test -pl adapter-in -Dtest='*Debtor*Controller*Test,*Debt*Controller*Test,*Security*Test'` | Existing payment/proposal controller tests green |
-| 6 | bootstrap | Register new beans, security permission mappings, and observability meters/traces/log correlation for intake | no | `ApplicationServiceConfig`, `application.yml`, security config | web-engineer | `mvn -q test -pl bootstrap -Dtest='*Context*Test,*Observability*Test'` | Existing bootstrap smoke tests green |
-| 7 | frontend | Add intake/list pages and minimal navigation wiring | yes | existing navigation page only | frontend-engineer | `mvn -q test -pl bootstrap -Dtest='*UiSmoke*Test'` | Existing static page tests green |
-| 8 | hardening | Add extension-focused concurrency, idempotency replay, decoupling (intake no allocation trigger), and SLO alert-rule tests/checks | no | test modules + monitoring config | test-engineer | `mvn -q test -pl adapter-out,bootstrap -Dtest='*Concurrency*Test,*Idempotency*Test,*Integration*Test'` | Full regression suite green |
+| 1 | domain | Add `AccountingEntry` domain model + value objects/enums (`AccountingEventType`, `SourceAggregateType`) with immutability/guards | yes | none | domain-engineer | Unit tests for invariants and construction | Existing domain tests remain green |
+| 2 | domain | Add outbound/inbound ports for accounting write/read (`AccountingEntryRepository`, `AccountingEntryQueryUseCase`) | yes | none | domain-engineer | Port contract tests | Existing domain contracts unchanged |
+| 3 | adapter-out | Add JPA entity, Spring Data repository, mapper, and repository implementation for accounting entry persistence/query | yes | none | persistence-engineer | `@DataJpaTest` for insert/query/order/filter + index-aware query paths | Existing adapter-out repository tests green |
+| 4 | adapter-out | Wire strict-blocking insert into debt intake transactional worker path | no | `adapter-out/.../JpaDebtIntakeTransactionalWorker.java` | persistence-engineer | Test success => one `DEBT_ARRIVAL`; insert failure => full rollback | Existing debt intake behavior unchanged |
+| 5 | adapter-out | Wire strict-blocking insert into allocation transactional worker path | no | `adapter-out/.../JpaAllocationTransactionalWorker.java` | persistence-engineer | Concurrency/transaction tests: one `PAYMENT_ALLOCATION` per success; rollback on accounting failure | Existing allocation lock/idempotency tests green |
+| 6 | application | Add accounting write service + read query service and orchestrate filters/validation (`fromDate <= toDate`) | yes | none | domain-engineer | JUnit/Mockito tests for orchestration and validation | Existing application service tests green |
+| 7 | application | Wire payment intake path to create `PAYMENT_ARRIVAL` with `occurredAt` from bank date | no | `application/.../PaymentIntakeApplicationService.java` (or delegated worker wiring) | domain-engineer | Test `occurredAt=bankDate`; rejection -> no entry | Existing payment intake contract tests green |
+| 8 | adapter-in | Add `GET /accounting-entries` controller + DTOs + mapper + validation + authority `ACCOUNTING_READ` | yes | none | web-engineer | `@WebMvcTest`: 200/400/403, sort/filter, empty list | Existing controller tests unchanged |
+| 9 | bootstrap | Register beans and security mapping for accounting read path | no | `bootstrap/.../ApplicationServiceConfig.java`, security config | web-engineer | Bootstrap wiring tests/startup checks | Existing bean graph unaffected |
+| 10 | frontend | Add standalone accounting entries page and JS; add navigation link from index | partly | `bootstrap/src/main/resources/static/index.html` | frontend-engineer | Manual UI check + endpoint integration in browser | Existing pages still functional |
+| 11 | hardening | Add/extend transactional and idempotency tests for all 3 accounting triggers and strict rollback semantics | no | test files in adapter-out/application modules | test-engineer | Run module test suites once per impacted layer | Pre-existing full suite for impacted modules green |
 
 ## 9. Migration plan
 
 ### 9.1 Data migration
 
-- Tooling: project migration mechanism (Flyway/Liquibase used by bootstrap).
-- Forward script (additive + controlled evolution):
-  1. Create `intake_request` table with unique `idempotency_key`.
-  2. Add `audit_event.correlation_id` nullable column.
-  3. Pre-check duplicates for `debt.reference` across all debtors.
-  4. Drop `uk_debt_debtor_reference` and add global unique `uk_debt_reference_global` (explicit approved contract evolution).
-- Backward script (rollback):
-  1. Restore composite unique key.
-  2. Keep `intake_request` table and `correlation_id` column (safe additive rollback posture).
-- Backward-compatibility window: one release with pre-check report required before applying unique-key switch.
+- Tooling: project migration mechanism (Flyway/Liquibase as already used in bootstrap/adapter-out).
+- Forward script (additive):
+  - create table `accounting_entry`;
+  - add constraints: non-null mandatory fields, `amount > 0`;
+  - add indexes: `idx_accounting_entry_occurred_at`, `idx_accounting_entry_event_type`, optional `idx_accounting_entry_event_type_occurred_at`.
+- Backward script (rollback): drop `accounting_entry` table and related indexes (only for pre-production rollback windows).
+- Backward-compatibility window: fully backward-compatible additive deployment; no changes required for existing API clients.
 
 ### 9.2 API versioning
 
-- Existing endpoints preserved as-is: yes.
-- New endpoints exposed at: `/debtors`, `/debts` under existing API versioning convention.
-- Deprecation plan (if any): none in this cycle.
+- Existing endpoints preserved as-is: **yes**.
+- New endpoints exposed at: `GET /accounting-entries`.
+- Deprecation plan (if any): none in this increment.
 
 ### 9.3 Frontend impact
 
-- New pages: debtor intake/list, debt intake.
-- Modified existing pages (for navigation only): shell/menu.
-- Coordination notes: frontend must send required idempotency and correlation headers for intake writes.
+- New pages: `accounting-entries.html` (+ JS module).
+- Modified existing pages (for navigation only): `index.html`.
+- Coordination notes: ensure `ACCOUNTING_READ` users can access the page and endpoint; no export actions in UI.
 
 ## 10. Risks and mitigations
 
 | Risk | Likelihood | Impact | Mitigation | Rollback trigger |
 |---|---|---|---|---|
-| Existing data violates global debt reference uniqueness | Medium | High | Pre-migration duplicate scan + remediation playbook | Any duplicate found at cutover |
-| Retry storms create duplicate intake attempts | Medium | Medium | Enforce required idempotency key + deterministic replay response | Idempotency conflict/error rate above SLO |
-| Intake accidentally triggers allocation | Low | High | Architectural/contract tests asserting no allocation side effects | Any intake test creates allocation/proposal records |
-| Permission misconfiguration blocks authorized users | Medium | Medium | Explicit permission mapping tests with fixed names | Authz regression in smoke tests |
-| Missing traceability/alerts on intake failures | Medium | Medium | CorrelationId propagation, metrics/traces/logs, SLO alert rules | Observability checks fail in hardening gate |
+| Accounting side-effect breaks existing intake/allocation success paths | Medium | High | TDD for each trigger path + strict transactional tests before merge | Any regression on existing intake/allocation tests |
+| Duplicate accounting entries under retries/idempotency replay | Medium | High | Reuse existing idempotency boundaries and assert exactly-once in integration tests | More than one entry for same successful business event |
+| Read endpoint performance degradation on large date ranges | Low (MVP bounded list) | Medium | Indexed query + bounded list + validate filters | p95 latency exceeds agreed threshold in test env |
+| Authorization misconfiguration exposes accounting data | Medium | High | Enforce `ACCOUNTING_READ` at controller/security config + `403` tests | Unauthorized access returns non-403 |
+| Inconsistent `occurredAt` semantics for payment entries | Low | Medium | Lock rule now: `PAYMENT_ARRIVAL.occurredAt = bank date`; assert in tests | Any persisted entry not using bank date |
 
 ## 11. Approval
 

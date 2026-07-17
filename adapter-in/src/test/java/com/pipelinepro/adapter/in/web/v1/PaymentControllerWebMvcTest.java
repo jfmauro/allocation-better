@@ -127,7 +127,7 @@ class PaymentControllerWebMvcTest {
                 UUID.randomUUID(),
                 "TRX-001",
                 null,
-                null,
+                Instant.parse("2026-06-01T10:15:00Z"),
                 new BigDecimal("100.00"),
                 "EUR",
                 null,
@@ -143,6 +143,7 @@ class PaymentControllerWebMvcTest {
                         .content("""
                                 {
                                   "bankTransactionReference": "TRX-001",
+                                  "valueDate": "2026-06-01T10:15:00Z",
                                   "amount": 100.00,
                                   "currency": "EUR",
                                   "payerName": "John Doe"

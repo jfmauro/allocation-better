@@ -8,7 +8,14 @@ import com.pipelinepro.adapter.in.web.v1.dto.response.AllocationProposalResponse
 import com.pipelinepro.adapter.in.web.v1.dto.response.AllocationResultResponse;
 import com.pipelinepro.adapter.in.web.v1.dto.response.ProposalStateResponse;
 import com.pipelinepro.domain.AllocationProposal;
+import com.pipelinepro.domain.AllocationProposalCandidate;
+import com.pipelinepro.domain.AllocationProposalCandidateDetails;
+import com.pipelinepro.domain.AllocationProposalDetails;
+import com.pipelinepro.domain.Debt;
+import com.pipelinepro.domain.Debtor;
+import com.pipelinepro.domain.MatchConfidence;
 import com.pipelinepro.domain.ProposalStatus;
+import com.pipelinepro.domain.port.in.GetAllocationProposalDetailsUseCase;
 import com.pipelinepro.domain.port.in.GetProposalCandidatesUseCase;
 import com.pipelinepro.domain.port.in.GetProposalDetailUseCase;
 import com.pipelinepro.domain.port.in.ProposalLifecycleUseCase;
@@ -31,11 +38,11 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -51,6 +58,9 @@ class AllocationProposalControllerWebMvcTest {
 
     @MockitoBean
     private ProposalLifecycleUseCase proposalLifecycleUseCase;
+
+    @MockitoBean
+    private GetAllocationProposalDetailsUseCase getAllocationProposalDetailsUseCase;
 
     @MockitoBean
     private GetProposalDetailUseCase getProposalDetailUseCase;
@@ -76,6 +86,19 @@ class AllocationProposalControllerWebMvcTest {
                 com.pipelinepro.domain.MatchingMethod.IDENTIFIER,
                 "candidate",
                 Instant.parse("2026-06-01T10:00:00Z"));
+        AllocationProposalCandidate candidate = new AllocationProposalCandidate(
+                UUID.randomUUID(),
+                proposalId,
+                UUID.randomUUID(),
+                UUID.randomUUID(),
+                MatchConfidence.HIGH,
+                new BigDecimal("10.00"),
+                0);
+        Debt debt = org.mockito.Mockito.mock(Debt.class);
+        Debtor debtor = org.mockito.Mockito.mock(Debtor.class);
+        AllocationProposalDetails details = new AllocationProposalDetails(
+                proposal,
+                List.of(new AllocationProposalCandidateDetails(candidate, debt, debtor)));
         AllocationProposalResponse response = new AllocationProposalResponse(
                 proposalId,
                 UUID.randomUUID(),
@@ -86,21 +109,20 @@ class AllocationProposalControllerWebMvcTest {
                 null,
                 null,
                 List.of(new AllocationProposalCandidateResponse(
-                        UUID.randomUUID(),
-                        UUID.randomUUID(),
-                        UUID.randomUUID(),
-                        com.pipelinepro.domain.MatchConfidence.HIGH,
-                        new BigDecimal("10.00"),
-                        0,
+                        candidate.id(),
+                        candidate.debtorId(),
+                        candidate.debtId(),
+                        candidate.confidence(),
+                        candidate.suggestedAmount(),
+                        candidate.rankOrder(),
                         null,
                         null)),
                 0L,
                 Instant.parse("2026-06-01T10:00:00Z"),
                 Instant.parse("2026-06-01T10:00:00Z"));
 
-        when(getProposalDetailUseCase.getProposal(proposalId)).thenReturn(Optional.of(proposal));
-        when(getProposalCandidatesUseCase.listCandidates(proposalId)).thenReturn(List.of());
-        when(proposalWebMapper.toAllocationProposalResponseWithCandidateResponses(any(), anyList())).thenReturn(response);
+        when(getAllocationProposalDetailsUseCase.getProposalDetails(proposalId)).thenReturn(Optional.of(details));
+        when(proposalWebMapper.toAllocationProposalResponse(details)).thenReturn(response);
 
         mockMvc.perform(get("/allocation-proposals/{proposalId}", proposalId))
                 .andExpect(status().isOk())
@@ -290,7 +312,7 @@ class AllocationProposalControllerWebMvcTest {
     @Test
     void getProposal_shouldReturn404_whenProposalMissing() throws Exception {
         UUID proposalId = UUID.randomUUID();
-        when(getProposalDetailUseCase.getProposal(proposalId)).thenReturn(Optional.empty());
+        when(getAllocationProposalDetailsUseCase.getProposalDetails(proposalId)).thenReturn(Optional.empty());
 
         mockMvc.perform(get("/allocation-proposals/{proposalId}", proposalId))
                 .andExpect(status().isNotFound())

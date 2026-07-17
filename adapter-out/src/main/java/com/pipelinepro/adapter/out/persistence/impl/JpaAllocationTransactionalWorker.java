@@ -7,21 +7,26 @@ import com.pipelinepro.adapter.out.persistence.entity.AllocationProposalEntity;
 import com.pipelinepro.adapter.out.persistence.entity.DebtEntity;
 import com.pipelinepro.adapter.out.persistence.entity.PaymentEntity;
 import com.pipelinepro.adapter.out.persistence.mapper.AuditEventEntityMapper;
+import com.pipelinepro.adapter.out.persistence.mapper.AccountingEntryEntityMapper;
 import com.pipelinepro.adapter.out.persistence.mapper.AllocationProposalEntityMapper;
 import com.pipelinepro.adapter.out.persistence.mapper.DebtEntityMapper;
 import com.pipelinepro.adapter.out.persistence.mapper.PaymentAllocationEntityMapper;
 import com.pipelinepro.adapter.out.persistence.mapper.PaymentEntityMapper;
+import com.pipelinepro.adapter.out.persistence.repository.SpringDataAccountingEntryRepository;
 import com.pipelinepro.adapter.out.persistence.repository.SpringDataAllocationProposalRepository;
 import com.pipelinepro.adapter.out.persistence.repository.SpringDataAuditEventRepository;
 import com.pipelinepro.adapter.out.persistence.repository.SpringDataDebtRepository;
 import com.pipelinepro.adapter.out.persistence.repository.SpringDataPaymentAllocationRepository;
 import com.pipelinepro.adapter.out.persistence.repository.SpringDataPaymentRepository;
+import com.pipelinepro.domain.AccountingEntry;
+import com.pipelinepro.domain.AccountingEventType;
 import com.pipelinepro.domain.AllocationProposal;
 import com.pipelinepro.domain.AuditEvent;
 import com.pipelinepro.domain.Debt;
 import com.pipelinepro.domain.Payment;
 import com.pipelinepro.domain.PaymentAllocation;
 import com.pipelinepro.domain.ProposalStatus;
+import com.pipelinepro.domain.SourceAggregateType;
 import com.pipelinepro.domain.port.out.AllocationTransactionalWorker;
 import com.pipelinepro.domain.port.out.command.AllocationExecutionRequest;
 import java.math.BigDecimal;
@@ -45,10 +50,12 @@ public class JpaAllocationTransactionalWorker implements AllocationTransactional
     private final SpringDataAllocationProposalRepository springDataAllocationProposalRepository;
     private final SpringDataPaymentAllocationRepository springDataPaymentAllocationRepository;
     private final SpringDataAuditEventRepository springDataAuditEventRepository;
+    private final SpringDataAccountingEntryRepository springDataAccountingEntryRepository;
     private final PaymentEntityMapper paymentEntityMapper;
     private final DebtEntityMapper debtEntityMapper;
     private final PaymentAllocationEntityMapper paymentAllocationEntityMapper;
     private final AuditEventEntityMapper auditEventEntityMapper;
+    private final AccountingEntryEntityMapper accountingEntryEntityMapper;
     private final AllocationProposalEntityMapper allocationProposalEntityMapper;
     private final ObjectMapper objectMapper;
 
@@ -58,20 +65,24 @@ public class JpaAllocationTransactionalWorker implements AllocationTransactional
             SpringDataAllocationProposalRepository springDataAllocationProposalRepository,
             SpringDataPaymentAllocationRepository springDataPaymentAllocationRepository,
             SpringDataAuditEventRepository springDataAuditEventRepository,
+            SpringDataAccountingEntryRepository springDataAccountingEntryRepository,
             PaymentEntityMapper paymentEntityMapper,
             DebtEntityMapper debtEntityMapper,
             PaymentAllocationEntityMapper paymentAllocationEntityMapper,
             AuditEventEntityMapper auditEventEntityMapper,
+            AccountingEntryEntityMapper accountingEntryEntityMapper,
             AllocationProposalEntityMapper allocationProposalEntityMapper) {
         this.springDataPaymentRepository = springDataPaymentRepository;
         this.springDataDebtRepository = springDataDebtRepository;
         this.springDataAllocationProposalRepository = springDataAllocationProposalRepository;
         this.springDataPaymentAllocationRepository = springDataPaymentAllocationRepository;
         this.springDataAuditEventRepository = springDataAuditEventRepository;
+        this.springDataAccountingEntryRepository = springDataAccountingEntryRepository;
         this.paymentEntityMapper = paymentEntityMapper;
         this.debtEntityMapper = debtEntityMapper;
         this.paymentAllocationEntityMapper = paymentAllocationEntityMapper;
         this.auditEventEntityMapper = auditEventEntityMapper;
+        this.accountingEntryEntityMapper = accountingEntryEntityMapper;
         this.allocationProposalEntityMapper = allocationProposalEntityMapper;
         this.objectMapper = JsonMapper.builder().build();
     }
@@ -137,6 +148,8 @@ public class JpaAllocationTransactionalWorker implements AllocationTransactional
             if (lockedProposal != null) {
                 springDataAllocationProposalRepository.save(lockedProposal);
             }
+
+            appendPaymentAllocationAccountingEntry(persistedAllocation, lockedPayment.getCurrency(), request.occurredAt());
 
             if (request.proposalId() != null) {
                 persistAuditEvent(buildUserValidatedAllocationAuditEvent(request, lockedProposal));
@@ -243,5 +256,23 @@ public class JpaAllocationTransactionalWorker implements AllocationTransactional
         var auditEventEntity = auditEventEntityMapper.toEntity(auditEvent);
         auditEventEntity.setId(null);
         springDataAuditEventRepository.save(auditEventEntity);
+    }
+
+    private void appendPaymentAllocationAccountingEntry(
+            PaymentAllocation allocation,
+            String currency,
+            java.time.Instant occurredAt) {
+        AccountingEntry accountingEntry = AccountingEntry.append(
+                UUID.randomUUID(),
+                AccountingEventType.PAYMENT_ALLOCATION,
+                SourceAggregateType.ALLOCATION,
+                allocation.id(),
+                allocation.amount(),
+                currency,
+                occurredAt,
+                occurredAt);
+        var accountingEntryEntity = accountingEntryEntityMapper.toEntity(accountingEntry);
+        accountingEntryEntity.setId(null);
+        springDataAccountingEntryRepository.saveAndFlush(accountingEntryEntity);
     }
 }

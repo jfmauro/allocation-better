@@ -14,6 +14,8 @@ public interface DebtRepository {
 
     List<Debt> findByDebtorId(UUID debtorId);
 
+    List<Debt> findByIds(Set<UUID> debtIds);
+
     List<Debt> findByDebtorIds(Set<UUID> debtorIds);
 
     List<Debt> findByReference(String reference);

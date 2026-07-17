@@ -6,6 +6,7 @@ import com.pipelinepro.domain.Debtor;
 import com.pipelinepro.domain.port.out.DebtorRepository;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -55,6 +56,21 @@ public class JpaDebtorRepository implements DebtorRepository {
                     .map(debtorEntityMapper::toDomain);
         } finally {
             log.info("+++end findByEnterpriseNumber+++");
+        }
+    }
+
+    @Override
+    public List<Debtor> findByIds(Set<UUID> debtorIds) {
+        log.info("+++start findByIds+++");
+        try {
+            if (debtorIds == null || debtorIds.isEmpty()) {
+                return List.of();
+            }
+            return springDataDebtorRepository.findAllById(debtorIds).stream()
+                    .map(debtorEntityMapper::toDomain)
+                    .toList();
+        } finally {
+            log.info("+++end findByIds+++");
         }
     }
 

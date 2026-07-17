@@ -4,6 +4,7 @@ import com.pipelinepro.domain.Debtor;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 public interface DebtorRepository {
@@ -12,6 +13,8 @@ public interface DebtorRepository {
     Optional<Debtor> findByNationalNumber(String nationalNumber);
 
     Optional<Debtor> findByEnterpriseNumber(String enterpriseNumber);
+
+    List<Debtor> findByIds(Set<UUID> debtorIds);
 
     List<Debtor> findAllActive();
 

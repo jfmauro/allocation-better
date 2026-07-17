@@ -5,8 +5,10 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.pipelinepro.adapter.out.persistence.impl.JpaDebtorIntakeTransactionalWorker;
 import com.pipelinepro.adapter.out.persistence.impl.JpaDebtIntakeTransactionalWorker;
+import com.pipelinepro.adapter.out.persistence.mapper.AccountingEntryEntityMapper;
 import com.pipelinepro.adapter.out.persistence.mapper.DebtEntityMapper;
 import com.pipelinepro.adapter.out.persistence.mapper.DebtorEntityMapper;
+import com.pipelinepro.adapter.out.persistence.repository.SpringDataAccountingEntryRepository;
 import com.pipelinepro.adapter.out.persistence.repository.SpringDataDebtRepository;
 import com.pipelinepro.adapter.out.persistence.repository.SpringDataDebtorRepository;
 import com.pipelinepro.adapter.out.persistence.repository.SpringDataIntakeRequestRepository;
@@ -25,14 +27,19 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.mapstruct.factory.Mappers;
+import org.aspectj.lang.ProceedingJoinPoint;
+import org.aspectj.lang.annotation.Around;
+import org.aspectj.lang.annotation.Aspect;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -42,6 +49,7 @@ import org.springframework.transaction.annotation.Transactional;
 class IntakeTransactionalWorkerIntegrationTest {
 
     private static final int CONCURRENT_REQUEST_COUNT = 8;
+    private static final AtomicBoolean FAIL_ACCOUNTING_WRITE = new AtomicBoolean(false);
 
     @Autowired
     private JpaDebtorIntakeTransactionalWorker debtorWorker;
@@ -58,9 +66,13 @@ class IntakeTransactionalWorkerIntegrationTest {
     @Autowired
     private SpringDataDebtRepository springDataDebtRepository;
 
+    @Autowired
+    private SpringDataAccountingEntryRepository springDataAccountingEntryRepository;
+
     @AfterEach
     void cleanDatabase() {
         springDataDebtRepository.deleteAll();
+        springDataAccountingEntryRepository.deleteAll();
         springDataDebtorRepository.deleteAll();
         springDataIntakeRequestRepository.deleteAll();
     }
@@ -119,6 +131,11 @@ class IntakeTransactionalWorkerIntegrationTest {
 
         assertThat(first.id()).isEqualTo(replay.id());
         assertThat(springDataDebtRepository.count()).isEqualTo(1L);
+        assertThat(springDataAccountingEntryRepository.count()).isEqualTo(1L);
+        assertThat(springDataAccountingEntryRepository.findAll()).singleElement().satisfies(entry -> {
+            assertThat(entry.getEventType().name()).isEqualTo("DEBT_ARRIVAL");
+            assertThat(entry.getSourceAggregateId()).isEqualTo(first.id());
+        });
         assertThat(springDataIntakeRequestRepository.findByIdempotencyKey("idem-debt-1"))
                 .hasValueSatisfying(entity -> {
                     assertThat(entity.getOperation()).isEqualTo("CREATE_DEBT");
@@ -191,6 +208,57 @@ class IntakeTransactionalWorkerIntegrationTest {
                         "corr-dup-ref-2"))
                 .isInstanceOf(RuntimeException.class)
                 .hasMessageContaining("Duplicate debt reference");
+    }
+
+    @Test
+    void should_persist_debt_arrival_accounting_entry_when_debt_is_created() {
+        UUID debtorId = createDebtorId();
+
+        var debt = debtWorker.createDebt(
+                debtorId,
+                "DEBT-ACCOUNTING-1",
+                new BigDecimal("40.00"),
+                "EUR",
+                DebtStatus.OPEN,
+                null,
+                "idem-accounting-1",
+                "corr-accounting-1");
+
+        assertThat(springDataAccountingEntryRepository.count()).isEqualTo(1L);
+        assertThat(springDataAccountingEntryRepository.findAll()).singleElement().satisfies(entry -> {
+            assertThat(entry.getEventType().name()).isEqualTo("DEBT_ARRIVAL");
+            assertThat(entry.getSourceAggregateType().name()).isEqualTo("DEBT");
+            assertThat(entry.getSourceAggregateId()).isEqualTo(debt.id());
+            assertThat(entry.getAmount()).isEqualByComparingTo("40.00");
+            assertThat(entry.getCurrency()).isEqualTo("EUR");
+        });
+    }
+
+    @Test
+    void should_rollback_debt_creation_when_accounting_write_fails() {
+        FAIL_ACCOUNTING_WRITE.set(true);
+
+        try {
+            UUID debtorId = createDebtorId();
+
+            assertThatThrownBy(() -> debtWorker.createDebt(
+                            debtorId,
+                            "DEBT-ACCOUNTING-FAIL-1",
+                            new BigDecimal("55.00"),
+                            "EUR",
+                            DebtStatus.OPEN,
+                            null,
+                            "idem-accounting-fail-1",
+                            "corr-accounting-fail-1"))
+                    .isInstanceOf(DataIntegrityViolationException.class)
+                    .hasMessageContaining("accounting-write-failure");
+
+            assertThat(springDataDebtRepository.count()).isZero();
+            assertThat(springDataAccountingEntryRepository.count()).isZero();
+            assertThat(springDataIntakeRequestRepository.findByIdempotencyKey("idem-accounting-fail-1")).isEmpty();
+        } finally {
+            FAIL_ACCOUNTING_WRITE.set(false);
+        }
     }
 
     @Test
@@ -302,6 +370,11 @@ class IntakeTransactionalWorkerIntegrationTest {
     static class IntakeWorkerTestConfiguration {
 
         @Bean
+        AccountingEntryEntityMapper accountingEntryEntityMapper() {
+            return Mappers.getMapper(AccountingEntryEntityMapper.class);
+        }
+
+        @Bean
         DebtorEntityMapper debtorEntityMapper() {
             return Mappers.getMapper(DebtorEntityMapper.class);
         }
@@ -309,6 +382,11 @@ class IntakeTransactionalWorkerIntegrationTest {
         @Bean
         DebtEntityMapper debtEntityMapper() {
             return Mappers.getMapper(DebtEntityMapper.class);
+        }
+
+        @Bean
+        AccountingEntrySaveFailureAspect accountingEntrySaveFailureAspect() {
+            return new AccountingEntrySaveFailureAspect();
         }
 
         @Bean
@@ -328,15 +406,31 @@ class IntakeTransactionalWorkerIntegrationTest {
         JpaDebtIntakeTransactionalWorker jpaDebtIntakeTransactionalWorker(
                 SpringDataIntakeRequestRepository intakeRequestRepository,
                 SpringDataDebtRepository debtRepository,
+                SpringDataAccountingEntryRepository accountingEntryRepository,
                 SpringDataDebtorRepository debtorRepository,
                 DebtEntityMapper debtEntityMapper,
+                AccountingEntryEntityMapper accountingEntryEntityMapper,
                 jakarta.persistence.EntityManager entityManager) {
             return new JpaDebtIntakeTransactionalWorker(
                     intakeRequestRepository,
                     debtRepository,
+                    accountingEntryRepository,
                     debtorRepository,
                     debtEntityMapper,
+                    accountingEntryEntityMapper,
                     entityManager);
+        }
+
+        @Aspect
+        class AccountingEntrySaveFailureAspect {
+
+            @Around("execution(* com.pipelinepro.adapter.out.persistence.repository.SpringDataAccountingEntryRepository.saveAndFlush(..))")
+            Object failAccountingWriteWhenEnabled(ProceedingJoinPoint joinPoint) throws Throwable {
+                if (FAIL_ACCOUNTING_WRITE.get()) {
+                    throw new DataIntegrityViolationException("accounting-write-failure");
+                }
+                return joinPoint.proceed();
+            }
         }
     }
 }

@@ -14,6 +14,7 @@ public record ReceivePaymentRequest(
         @NotBlank(message = "bankTransactionReference is required")
         String bankTransactionReference,
         Instant executionDate,
+        @NotNull(message = "valueDate is required")
         Instant valueDate,
         @NotNull(message = "amount is required")
         @DecimalMin(value = "0.01", message = "amount must be greater than zero")

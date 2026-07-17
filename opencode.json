@@ -1,9 +1,8 @@
 {
   "$schema": "https://opencode.ai/config.json",
   "default_agent": "orchestrator",
-  "model": "openai/fait-gpt-5.4-Custom",
-  "small_model": "openai/fait-gpt-5.k2.6-custom",
-  "enabled_providers": ["openai"],
+  "model": "openai/FAIT-gpt-5.6-opencode",
+  "small_model": "openai/fait-gpt-5.4-Custom",
   "lsp": true,
   "compaction": {
     "auto": true,
@@ -25,17 +24,17 @@
     "skill": "allow"
   },
   "agent": {
-    "orchestrator": { "model": "openai/fait-gpt-5.4-Custom" },
-    "technical-functional-analyst": { "model": "openai/fait-gpt-5.4-Custom" },
-    "sad-architect-reviewer": { "model": "openai/fait-gpt-5.4-Custom" },
-    "planner": { "model": "openai/fait-gpt-5.4-Custom" },
-    "domain-engineer": { "model": "openai/fait-gpt-5.4-Custom" },
-    "persistence-engineer": { "model": "openai/fait-gpt-5.k2.6-custom" },
-    "web-engineer": { "model": "openai/fait-gpt-5.k2.6-custom" },
-    "frontend-engineer": { "model": "openai/fait-gpt-5.k2.6-custom" },
+    "orchestrator": { "model": "openai/FAIT-gpt-5.6-opencode" },
+    "technical-functional-analyst": { "model": "openai/FAIT-gpt-5.6-opencode" },
+    "sad-architect-reviewer": { "model": "openai/FAIT-gpt-5.6-opencode" },
+    "planner": { "model": "openai/FAIT-gpt-5.6-opencode" },
+    "domain-engineer": { "model": "openai/FAIT-gpt-5.6-opencode" },
+    "persistence-engineer": { "model": "openai/fait-gpt-5.4-Custom" },
+    "web-engineer": { "model": "openai/fait-gpt-5.4-Custom" },
+    "frontend-engineer": { "model": "openai/fait-gpt-5.4-Custom" },
     "test-engineer": { "model": "openai/fait-gpt-5.4-Custom" },
     "spec-reviewer": { "model": "openai/fait-gpt-5.4-Custom" },
     "code-reviewer": { "model": "openai/fait-gpt-5.4-Custom" },
-    "documentation-engineer": { "model": "openai/fait-gpt-5.4-Custom" }
+    "documentation-engineer": { "model": "openai/FAIT-gpt-5.6-opencode" }
   }
 }
