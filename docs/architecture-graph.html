@@ -1,0 +1,410 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Graphify - Diagramme d'architecture hexagonale</title>
+    <meta
+      name="description"
+      content="Diagramme interactif de l'architecture hexagonale du projet allocation-better, construit à partir de graphify-out/graph.json."
+    />
+    <link rel="stylesheet" href="./architecture-graph.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#contenu-principal">Aller au contenu principal</a>
+
+    <header class="page-header" role="banner">
+      <div class="header-content">
+        <p class="overline">Graphify · allocation-better</p>
+        <h1>Diagramme interactif de l'architecture hexagonale</h1>
+        <p class="lede">
+          Vue synthétique (nœuds clés + ports/use cases + composants de persistance)
+          dérivée de <code>graphify-out/graph.json</code>.
+        </p>
+      </div>
+    </header>
+
+    <main id="contenu-principal" class="layout" role="main">
+      <section class="panel panel-controls" aria-labelledby="titre-controles">
+        <h2 id="titre-controles">Recherche et filtres</h2>
+
+        <form id="search-form" class="control-block" novalidate>
+          <label for="search-input">Rechercher un nœud visible</label>
+          <div class="search-row">
+            <input
+              id="search-input"
+              name="search"
+              type="search"
+              list="node-suggestions"
+              placeholder="Ex. PaymentController"
+              autocomplete="off"
+              aria-describedby="search-feedback"
+            />
+            <button type="submit" class="btn btn-primary">Rechercher</button>
+            <button id="reset-btn" type="button" class="btn btn-secondary">
+              Réinitialiser
+            </button>
+          </div>
+          <datalist id="node-suggestions"></datalist>
+          <p id="search-feedback" class="helper-text" aria-live="polite"></p>
+        </form>
+
+        <fieldset class="control-block" aria-labelledby="legend-layers">
+          <legend id="legend-layers">Modules / couches</legend>
+          <div id="layer-filters" class="chips"></div>
+        </fieldset>
+
+        <fieldset class="control-block" aria-labelledby="legend-relations">
+          <legend id="legend-relations">Types de relation</legend>
+          <div id="relation-filters" class="chips chips-dense"></div>
+        </fieldset>
+
+        <section class="legend" aria-labelledby="legend-title">
+          <h3 id="legend-title">Légende</h3>
+
+          <ul class="legend-list">
+            <li><span class="legend-dot legend-dot-adapter-in"></span>adapter-in</li>
+            <li><span class="legend-dot legend-dot-application"></span>application</li>
+            <li><span class="legend-dot legend-dot-domain"></span>domain</li>
+            <li><span class="legend-dot legend-dot-adapter-out"></span>adapter-out</li>
+            <li><span class="legend-dot legend-dot-bootstrap"></span>bootstrap</li>
+          </ul>
+
+          <ul class="legend-list legend-list-lines">
+            <li>
+              <span class="legend-line legend-line-extracted"></span>
+              relation extraite (EXTRACTED)
+            </li>
+            <li>
+              <span class="legend-line legend-line-inferred"></span>
+              relation inférée (INFERRED)
+            </li>
+          </ul>
+        </section>
+      </section>
+
+      <section class="panel panel-graph" aria-labelledby="titre-graphe">
+        <div class="panel-head">
+          <h2 id="titre-graphe">Graphe d'architecture</h2>
+          <p id="selection-summary" class="helper-text" aria-live="polite"></p>
+          <p id="snapshot-note" class="helper-text" aria-live="polite"></p>
+        </div>
+
+        <div class="canvas-shell">
+          <p class="graph-static-note helper-text" data-static-note>
+            Static SVG snapshot is visible immediately. Search and filters require JavaScript.
+          </p>
+          <svg
+            id="graph-svg"
+            viewBox="0 0 1800 1000"
+            role="img"
+            aria-labelledby="titre-graphe description-graphe"
+            tabindex="0"
+          >
+            <title id="description-graphe">
+              Diagramme interactif de l'architecture hexagonale avec zones, nœuds,
+              relations dirigées et filtres.
+            </title>
+            <defs>
+              <marker
+                id="arrow-head"
+                viewBox="0 0 12 12"
+                refX="10"
+                refY="6"
+                markerWidth="7"
+                markerHeight="7"
+                orient="auto-start-reverse"
+              >
+                <path d="M 0 0 L 12 6 L 0 12 z" fill="currentColor"></path>
+              </marker>
+
+              <marker
+                id="arrow-layer"
+                viewBox="0 0 12 12"
+                refX="10"
+                refY="6"
+                markerWidth="6"
+                markerHeight="6"
+                orient="auto-start-reverse"
+              >
+                <path d="M 0 0 L 12 6 L 0 12 z" fill="#64748b"></path>
+              </marker>
+            </defs>
+
+            <g id="viewport">
+              <g id="layer-zones">
+                <g data-static-snapshot="true">
+                  <rect class="zone-rect zone-adapter-in" x="72" y="86" width="318" height="866" rx="12" ry="12"></rect>
+                  <text class="zone-label" x="88" y="72">adapter-in</text>
+                </g>
+                <g data-static-snapshot="true">
+                  <rect class="zone-rect zone-application" x="406" y="86" width="318" height="866" rx="12" ry="12"></rect>
+                  <text class="zone-label" x="422" y="72">application</text>
+                </g>
+                <g data-static-snapshot="true">
+                  <rect class="zone-rect zone-domain" x="740" y="86" width="318" height="866" rx="12" ry="12"></rect>
+                  <text class="zone-label" x="756" y="72">domain</text>
+                </g>
+                <g data-static-snapshot="true">
+                  <rect class="zone-rect zone-adapter-out" x="1074" y="86" width="318" height="866" rx="12" ry="12"></rect>
+                  <text class="zone-label" x="1090" y="72">adapter-out</text>
+                </g>
+                <g data-static-snapshot="true">
+                  <rect class="zone-rect zone-bootstrap" x="1408" y="86" width="318" height="866" rx="12" ry="12"></rect>
+                  <text class="zone-label" x="1424" y="72">bootstrap</text>
+                </g>
+              </g>
+              <g id="layer-flows">
+                <path class="layer-flow" data-static-snapshot="true" d="M 231 52 Q 398 18 565 52"></path>
+                <path class="layer-flow" data-static-snapshot="true" d="M 565 52 Q 732 18 899 52"></path>
+                <path class="layer-flow" data-static-snapshot="true" d="M 899 52 Q 1066 18 1233 52"></path>
+                <path class="layer-flow" data-static-snapshot="true" d="M 1567 52 Q 1066 8 565 52"></path>
+              </g>
+              <g id="edge-layer">
+                <path class="graph-edge" data-static-snapshot="true" stroke="#f59e0b" color="#f59e0b" d="M 320 240 C 410 240 470 180 560 180"></path>
+                <path class="graph-edge" data-static-snapshot="true" stroke="#f59e0b" color="#f59e0b" d="M 320 240 C 410 240 470 250 560 250"></path>
+                <path class="graph-edge" data-static-snapshot="true" stroke="#f59e0b" color="#f59e0b" d="M 320 240 C 410 240 470 320 560 320"></path>
+                <path class="graph-edge" data-static-snapshot="true" stroke="#f59e0b" color="#f59e0b" d="M 320 390 C 410 390 470 460 560 460"></path>
+                <path class="graph-edge is-inferred" data-static-snapshot="true" stroke="#4f46e5" color="#4f46e5" d="M 320 390 C 410 390 470 530 560 530"></path>
+                <path class="graph-edge" data-static-snapshot="true" stroke="#f97316" color="#f97316" d="M 560 180 C 670 180 790 180 900 180"></path>
+                <path class="graph-edge" data-static-snapshot="true" stroke="#f97316" color="#f97316" d="M 560 250 C 670 250 790 250 900 250"></path>
+                <path class="graph-edge" data-static-snapshot="true" stroke="#f97316" color="#f97316" d="M 560 390 C 670 390 790 390 900 390"></path>
+                <path class="graph-edge" data-static-snapshot="true" stroke="#f97316" color="#f97316" d="M 560 460 C 670 460 790 460 900 460"></path>
+                <path class="graph-edge" data-static-snapshot="true" stroke="#f97316" color="#f97316" d="M 560 530 C 670 530 790 530 900 530"></path>
+                <path class="graph-edge" data-static-snapshot="true" stroke="#f59e0b" color="#f59e0b" d="M 565 180 C 655 140 805 140 900 600"></path>
+                <path class="graph-edge" data-static-snapshot="true" stroke="#f59e0b" color="#f59e0b" d="M 565 180 C 655 180 805 180 900 670"></path>
+                <path class="graph-edge" data-static-snapshot="true" stroke="#f59e0b" color="#f59e0b" d="M 565 180 C 655 220 805 220 900 740"></path>
+                <path class="graph-edge" data-static-snapshot="true" stroke="#f59e0b" color="#f59e0b" d="M 565 250 C 655 250 805 250 900 810"></path>
+                <path class="graph-edge" data-static-snapshot="true" stroke="#f59e0b" color="#f59e0b" d="M 565 320 C 655 320 805 320 900 880"></path>
+                <path class="graph-edge" data-static-snapshot="true" stroke="#f59e0b" color="#f59e0b" d="M 565 390 C 655 390 805 390 900 810"></path>
+                <path class="graph-edge" data-static-snapshot="true" stroke="#f59e0b" color="#f59e0b" d="M 565 460 C 655 460 805 460 900 880"></path>
+                <path class="graph-edge" data-static-snapshot="true" stroke="#f59e0b" color="#f59e0b" d="M 565 530 C 655 530 805 530 900 600"></path>
+                <path class="graph-edge" data-static-snapshot="true" stroke="#f59e0b" color="#f59e0b" d="M 565 530 C 655 530 805 530 900 670"></path>
+                <path class="graph-edge" data-static-snapshot="true" stroke="#f59e0b" color="#f59e0b" d="M 900 180 C 985 180 1145 180 1233 180"></path>
+                <path class="graph-edge" data-static-snapshot="true" stroke="#f59e0b" color="#f59e0b" d="M 900 180 C 985 220 1145 220 1233 250"></path>
+                <path class="graph-edge" data-static-snapshot="true" stroke="#f59e0b" color="#f59e0b" d="M 900 180 C 985 260 1145 260 1233 320"></path>
+                <path class="graph-edge" data-static-snapshot="true" stroke="#f59e0b" color="#f59e0b" d="M 900 250 C 985 250 1145 250 1233 390"></path>
+                <path class="graph-edge" data-static-snapshot="true" stroke="#f59e0b" color="#f59e0b" d="M 900 320 C 985 320 1145 320 1233 460"></path>
+                <path class="graph-edge" data-static-snapshot="true" stroke="#f59e0b" color="#f59e0b" d="M 900 460 C 985 460 1145 460 1233 530"></path>
+                <path class="graph-edge" data-static-snapshot="true" stroke="#06b6d4" color="#06b6d4" d="M 1567 220 C 1460 220 1340 220 1233 180"></path>
+                <path class="graph-edge" data-static-snapshot="true" stroke="#06b6d4" color="#06b6d4" d="M 1567 220 C 1460 220 1340 220 1233 250"></path>
+                <path class="graph-edge" data-static-snapshot="true" stroke="#06b6d4" color="#06b6d4" d="M 1567 220 C 1460 220 1340 220 1233 320"></path>
+                <path class="graph-edge" data-static-snapshot="true" stroke="#06b6d4" color="#06b6d4" d="M 1567 220 C 1460 260 1340 260 1233 390"></path>
+                <path class="graph-edge" data-static-snapshot="true" stroke="#06b6d4" color="#06b6d4" d="M 1567 220 C 1460 300 1340 300 1233 460"></path>
+                <path class="graph-edge" data-static-snapshot="true" stroke="#06b6d4" color="#06b6d4" d="M 1567 220 C 1460 340 1340 340 1233 530"></path>
+              </g>
+              <g id="node-layer">
+                <g class="graph-node layer-adapter-in" data-static-snapshot="true" transform="translate(231 240)">
+                  <rect x="-110" y="-20" width="220" height="40" rx="9" ry="9"></rect>
+                  <text text-anchor="middle" dominant-baseline="middle">PaymentController</text>
+                </g>
+                <g class="graph-node layer-adapter-in" data-static-snapshot="true" transform="translate(231 390)">
+                  <rect x="-125" y="-20" width="250" height="40" rx="9" ry="9"></rect>
+                  <text text-anchor="middle" dominant-baseline="middle">AllocationProposalController</text>
+                </g>
+
+                <g class="graph-node layer-application" data-static-snapshot="true" transform="translate(565 180)">
+                  <rect x="-155" y="-20" width="310" height="40" rx="9" ry="9"></rect>
+                  <text text-anchor="middle" dominant-baseline="middle">PaymentMatchingApplicationService</text>
+                </g>
+                <g class="graph-node layer-application" data-static-snapshot="true" transform="translate(565 250)">
+                  <rect x="-145" y="-20" width="290" height="40" rx="9" ry="9"></rect>
+                  <text text-anchor="middle" dominant-baseline="middle">ProposalLifecycleApplicationService</text>
+                </g>
+                <g class="graph-node layer-application" data-static-snapshot="true" transform="translate(565 320)">
+                  <rect x="-148" y="-20" width="296" height="40" rx="9" ry="9"></rect>
+                  <text text-anchor="middle" dominant-baseline="middle">AllocationExecutionApplicationService</text>
+                </g>
+                <g class="graph-node layer-application" data-static-snapshot="true" transform="translate(565 390)">
+                  <rect x="-113" y="-20" width="226" height="40" rx="9" ry="9"></rect>
+                  <text text-anchor="middle" dominant-baseline="middle">QueryApplicationService</text>
+                </g>
+                <g class="graph-node layer-application" data-static-snapshot="true" transform="translate(565 460)">
+                  <rect x="-102" y="-20" width="204" height="40" rx="9" ry="9"></rect>
+                  <text text-anchor="middle" dominant-baseline="middle">ProposalLifecycleUseCase</text>
+                </g>
+                <g class="graph-node layer-application" data-static-snapshot="true" transform="translate(565 530)">
+                  <rect x="-96" y="-20" width="192" height="40" rx="9" ry="9"></rect>
+                  <text text-anchor="middle" dominant-baseline="middle">ExecuteAllocationUseCase</text>
+                </g>
+
+                <g class="graph-node layer-domain" data-static-snapshot="true" transform="translate(900 180)">
+                  <rect x="-78" y="-20" width="156" height="40" rx="9" ry="9"></rect>
+                  <text text-anchor="middle" dominant-baseline="middle">MatchPaymentUseCase</text>
+                </g>
+                <g class="graph-node layer-domain" data-static-snapshot="true" transform="translate(900 250)">
+                  <rect x="-74" y="-20" width="148" height="40" rx="9" ry="9"></rect>
+                  <text text-anchor="middle" dominant-baseline="middle">QueryPaymentUseCase</text>
+                </g>
+                <g class="graph-node layer-domain" data-static-snapshot="true" transform="translate(900 320)">
+                  <rect x="-74" y="-20" width="148" height="40" rx="9" ry="9"></rect>
+                  <text text-anchor="middle" dominant-baseline="middle">QueryDebtUseCase</text>
+                </g>
+                <g class="graph-node layer-domain" data-static-snapshot="true" transform="translate(900 390)">
+                  <rect x="-78" y="-20" width="156" height="40" rx="9" ry="9"></rect>
+                  <text text-anchor="middle" dominant-baseline="middle">QueryDebtorUseCase</text>
+                </g>
+                <g class="graph-node layer-domain" data-static-snapshot="true" transform="translate(900 460)">
+                  <rect x="-130" y="-20" width="260" height="40" rx="9" ry="9"></rect>
+                  <text text-anchor="middle" dominant-baseline="middle">GetAllocationProposalDetailsUseCase</text>
+                </g>
+                <g class="graph-node layer-domain" data-static-snapshot="true" transform="translate(900 530)">
+                  <rect x="-78" y="-20" width="156" height="40" rx="9" ry="9"></rect>
+                  <text text-anchor="middle" dominant-baseline="middle">ReceivePaymentUseCase</text>
+                </g>
+                <g class="graph-node layer-domain" data-static-snapshot="true" transform="translate(900 600)">
+                  <rect x="-48" y="-20" width="96" height="40" rx="9" ry="9"></rect>
+                  <text text-anchor="middle" dominant-baseline="middle">Payment</text>
+                </g>
+                <g class="graph-node layer-domain" data-static-snapshot="true" transform="translate(900 670)">
+                  <rect x="-36" y="-20" width="72" height="40" rx="9" ry="9"></rect>
+                  <text text-anchor="middle" dominant-baseline="middle">Debt</text>
+                </g>
+                <g class="graph-node layer-domain" data-static-snapshot="true" transform="translate(900 740)">
+                  <rect x="-45" y="-20" width="90" height="40" rx="9" ry="9"></rect>
+                  <text text-anchor="middle" dominant-baseline="middle">Debtor</text>
+                </g>
+                <g class="graph-node layer-domain" data-static-snapshot="true" transform="translate(900 810)">
+                  <rect x="-72" y="-20" width="144" height="40" rx="9" ry="9"></rect>
+                  <text text-anchor="middle" dominant-baseline="middle">AllocationProposal</text>
+                </g>
+                <g class="graph-node layer-domain" data-static-snapshot="true" transform="translate(900 880)">
+                  <rect x="-68" y="-20" width="136" height="40" rx="9" ry="9"></rect>
+                  <text text-anchor="middle" dominant-baseline="middle">PaymentAllocation</text>
+                </g>
+
+                <g class="graph-node layer-adapter-out" data-static-snapshot="true" transform="translate(1233 180)">
+                  <rect x="-82" y="-20" width="164" height="40" rx="9" ry="9"></rect>
+                  <text text-anchor="middle" dominant-baseline="middle">PaymentRepository</text>
+                </g>
+                <g class="graph-node layer-adapter-out" data-static-snapshot="true" transform="translate(1233 250)">
+                  <rect x="-70" y="-20" width="140" height="40" rx="9" ry="9"></rect>
+                  <text text-anchor="middle" dominant-baseline="middle">DebtRepository</text>
+                </g>
+                <g class="graph-node layer-adapter-out" data-static-snapshot="true" transform="translate(1233 320)">
+                  <rect x="-75" y="-20" width="150" height="40" rx="9" ry="9"></rect>
+                  <text text-anchor="middle" dominant-baseline="middle">DebtorRepository</text>
+                </g>
+                <g class="graph-node layer-adapter-out" data-static-snapshot="true" transform="translate(1233 390)">
+                  <rect x="-102" y="-20" width="204" height="40" rx="9" ry="9"></rect>
+                  <text text-anchor="middle" dominant-baseline="middle">AllocationProposalRepository</text>
+                </g>
+                <g class="graph-node layer-adapter-out" data-static-snapshot="true" transform="translate(1233 460)">
+                  <rect x="-100" y="-20" width="200" height="40" rx="9" ry="9"></rect>
+                  <text text-anchor="middle" dominant-baseline="middle">PaymentAllocationRepository</text>
+                </g>
+                <g class="graph-node layer-adapter-out" data-static-snapshot="true" transform="translate(1233 530)">
+                  <rect x="-108" y="-20" width="216" height="40" rx="9" ry="9"></rect>
+                  <text text-anchor="middle" dominant-baseline="middle">AllocationTransactionalWorker</text>
+                </g>
+
+                <g class="graph-node layer-bootstrap" data-static-snapshot="true" transform="translate(1567 220)">
+                  <rect x="-100" y="-20" width="200" height="40" rx="9" ry="9"></rect>
+                  <text text-anchor="middle" dominant-baseline="middle">ApplicationServiceConfig</text>
+                </g>
+              </g>
+            </g>
+          </svg>
+
+          <noscript>
+            <p class="noscript-note">
+              JavaScript is disabled. The static architecture snapshot remains visible,
+              but search, filters, zoom and node details are unavailable.
+            </p>
+          </noscript>
+
+          <div id="graph-loading" class="overlay" hidden>Chargement du graphe…</div>
+          <div id="graph-error" class="overlay overlay-error" hidden></div>
+        </div>
+
+        <p class="helper-text">
+          Navigation&nbsp;: molette = zoom, glisser = pan, touche <kbd>0</kbd> =
+          réinitialisation du zoom.
+        </p>
+      </section>
+
+      <aside class="panel panel-details" aria-labelledby="titre-details">
+        <h2 id="titre-details">Détails du nœud</h2>
+
+        <p id="details-empty" class="helper-text">
+          Cliquez sur un nœud pour afficher ses métadonnées Graphify.
+        </p>
+
+        <dl id="details-list" class="details-list" hidden>
+          <div>
+            <dt>Label</dt>
+            <dd id="detail-label">—</dd>
+          </div>
+          <div>
+            <dt>Couche</dt>
+            <dd id="detail-layer">—</dd>
+          </div>
+          <div>
+            <dt>Fichier source</dt>
+            <dd id="detail-source">—</dd>
+          </div>
+          <div>
+            <dt>Ligne</dt>
+            <dd id="detail-line">—</dd>
+          </div>
+          <div>
+            <dt>Communauté Graphify</dt>
+            <dd id="detail-community">—</dd>
+          </div>
+          <div>
+            <dt>Degré</dt>
+            <dd id="detail-degree">—</dd>
+          </div>
+        </dl>
+
+        <h3>Voisins directs</h3>
+        <ul id="neighbor-list" class="neighbor-list" aria-live="polite"></ul>
+      </aside>
+    </main>
+
+    <section class="panel stats-panel" aria-labelledby="titre-stats">
+      <h2 id="titre-stats">Statistiques Graphify</h2>
+
+      <div class="stats-grid">
+        <article class="stat-card">
+          <h3>Nœuds</h3>
+          <p id="stat-nodes">—</p>
+        </article>
+        <article class="stat-card">
+          <h3>Arêtes</h3>
+          <p id="stat-edges">—</p>
+        </article>
+        <article class="stat-card">
+          <h3>Communautés</h3>
+          <p id="stat-communities">—</p>
+        </article>
+        <article class="stat-card">
+          <h3>Taux EXTRACTED</h3>
+          <p id="stat-extracted">—</p>
+        </article>
+        <article class="stat-card">
+          <h3>Taux INFERRED</h3>
+          <p id="stat-inferred">—</p>
+        </article>
+      </div>
+
+      <p id="stats-note" class="helper-text"></p>
+    </section>
+
+    <footer class="page-footer" role="contentinfo">
+      <p>
+        Source&nbsp;: <code>graphify-out/graph.json</code>. Le mode par défaut affiche
+        un <strong>snapshot Graphify embarqué</strong> (sans fetch runtime) et montre une
+        sélection synthétique des composants pour la lisibilité (et non les 1533+
+        nœuds simultanément).
+      </p>
+      <p>
+        Utilisation rapide&nbsp;: depuis la racine du projet, lancez
+        <code>python -m http.server</code>, puis ouvrez
+        <code>http://localhost:8000/docs/architecture-graph.html</code>.
+      </p>
+    </footer>
+
+    <script type="module" src="./architecture-graph.js?v=4"></script>
+  </body>
+</html>

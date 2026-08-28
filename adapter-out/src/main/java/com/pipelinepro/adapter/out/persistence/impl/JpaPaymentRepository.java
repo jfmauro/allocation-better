@@ -30,7 +30,9 @@ public class JpaPaymentRepository implements PaymentRepository {
         log.info("+++start save+++");
         try {
             var entity = paymentEntityMapper.toEntity(payment);
-            if (payment.version() == 0L) {
+            boolean isNewPayment = payment.version() == 0L
+                    && !springDataPaymentRepository.existsById(payment.id());
+            if (isNewPayment) {
                 entity.setVersion(null);
                 return paymentEntityMapper.toDomain(springDataPaymentRepository.saveAndFlush(entity));
             }

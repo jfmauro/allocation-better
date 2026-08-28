@@ -46,6 +46,10 @@
                     </select>
                 </div>
                 <div>
+                    <label for="value-date">Bank value date and time</label>
+                    <input id="value-date" name="valueDate" type="datetime-local" required>
+                </div>
+                <div>
                     <label for="payer-name">Payer name</label>
                     <input id="payer-name" name="payerName" maxlength="120">
                 </div>
@@ -64,7 +68,7 @@
                 <textarea id="free-communication" name="freeCommunication" maxlength="500"></textarea>
             </div>
 
-            <p class="helper">Required fields: reference, amount, currency.</p>
+            <p class="helper">Required fields: reference, amount, currency, bank value date/time.</p>
             <div class="button-row">
                 <button type="submit" class="btn btn-primary" id="submit-intake">Submit payment</button>
                 <button type="reset" class="btn btn-ghost">Reset</button>

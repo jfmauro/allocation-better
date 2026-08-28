@@ -16,10 +16,13 @@ test("encodePathSegment neutralizes path traversal characters", () => {
 });
 
 test("payment intake payload is normalized", () => {
+    const expectedValueDate = new Date(2026, 7, 25, 12, 34, 0, 0).toISOString();
+
     const payload = paymentsIntake.buildPaymentIntakePayload({
         bankTransactionReference: "  TX-001  ",
         amount: "120.50",
         currency: "EUR",
+        valueDate: "2026-08-25T12:34",
         structuredCommunication: "  +++123/1234/12345+++  ",
         freeCommunication: "  note  ",
         payerName: "  Jane Doe  ",
@@ -30,6 +33,7 @@ test("payment intake payload is normalized", () => {
         bankTransactionReference: "TX-001",
         amount: 120.5,
         currency: "EUR",
+        valueDate: expectedValueDate,
         structuredCommunication: "+++123/1234/12345+++",
         freeCommunication: "note",
         payerName: "Jane Doe",
